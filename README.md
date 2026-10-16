@@ -54,4 +54,4 @@ node scripts/licenses.mjs
 
 在 `frontend/` 运行 `pnpm typecheck`、`pnpm test`（Lightning）与 `pnpm build`。第三方依赖变动后重新生成许可证清单；脚本保留能找到的上游根许可/NOTICE，分发原生二进制前仍需审核 vendored 库的许可。
 
-当前工作区另外存在 `git2 = "0.6"` 依赖（本次 API 未使用）。在较新 CMake 的 macOS 环境中，该旧版传递依赖的构建需要 `CMAKE_POLICY_VERSION_MINIMUM=3.5 cargo test` / `cargo run`；后续应单独确认该依赖的版本与用途。
+后端通过系统 `git` 执行仓库操作，不链接 libgit2；Rust 构建无需设置 `CMAKE_POLICY_VERSION_MINIMUM` 兼容参数，运行服务时仍需安装 Git。

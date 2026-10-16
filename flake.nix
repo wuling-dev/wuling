@@ -16,8 +16,6 @@
               cargo rustc rustfmt clippy nodejs_24 pnpm git
               pkg-config cmake openssl libiconv protobuf
             ];
-            # Compatibility for the existing git2 0.6 transitive dependency.
-            CMAKE_POLICY_VERSION_MINIMUM = "3.5";
           };
         });
       apps = forAllSystems (system:

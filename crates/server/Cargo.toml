@@ -3,6 +3,7 @@ name = "wuling-server"
 version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
+default-run = "wuling-server"
 
 [lints]
 workspace = true
@@ -12,7 +13,7 @@ axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-git2 = "0.6"
+wuling-storage = { path = "../storage" }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
