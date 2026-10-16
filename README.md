@@ -18,6 +18,10 @@ WULING_ADMIN_TOKEN='<random-secret-at-least-32-characters>' cargo run -p wuling-
 
 数据默认保存为 `data/state.json` 和 `data/repos/<id>.git`；可设置 `WULING_DATA_DIR`。元数据使用串行互斥和临时文件 rename，不能多实例共享同一数据目录。备份必须同时覆盖两者。
 
+PostgreSQL 数据层和离线原型导入工具正在按 `restore-core-devops` 恢复，分别位于独立的
+`wuling-storage` / `wuling-import` crate。连接、迁移和隔离验收见
+[数据库说明](deploy/DATABASE.md)。当前 HTTP 原型尚未切换到 PostgreSQL。
+
 ## 当前功能与边界
 
 | 模块 | 已实现 | 尚未实现 |

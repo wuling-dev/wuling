@@ -19,7 +19,7 @@ async fn migrations_are_atomic_and_repeatable() -> storage::Result<()> {
             .query_one("SELECT count(*) FROM schema_migrations", &[])
             .await?
             .get::<_, i64>(0),
-        1
+        2
     );
     let tx = client.transaction().await?;
     let user_id: i64 = tx

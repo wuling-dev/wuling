@@ -14,7 +14,7 @@
           default = pkgs.mkShell {
             packages = with pkgs; [
               cargo rustc rustfmt clippy nodejs_24 pnpm git
-              pkg-config cmake openssl libiconv protobuf
+              pkg-config cmake openssl libiconv protobuf postgresql_18
             ];
           };
         });

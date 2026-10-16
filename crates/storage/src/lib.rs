@@ -8,11 +8,18 @@ use tokio_postgres::{Client, NoTls};
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-const MIGRATIONS: &[(i64, &str, &str)] = &[(
-    1,
-    "identity_repository",
-    include_str!("../migrations/0001_identity_repository.sql"),
-)];
+const MIGRATIONS: &[(i64, &str, &str)] = &[
+    (
+        1,
+        "identity_repository",
+        include_str!("../migrations/0001_identity_repository.sql"),
+    ),
+    (
+        2,
+        "prototype_import",
+        include_str!("../migrations/0002_prototype_import.sql"),
+    ),
+];
 
 /// 本机运维连接；远端数据库必须通过经过验证的 TLS 通道连接。
 pub async fn connect_local(url: &str) -> Result<Client> {
