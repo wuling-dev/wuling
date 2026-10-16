@@ -40,3 +40,6 @@ credentials.json
 # Added by cargo
 
 /target
+
+# Local repository and collaboration state
+/data/

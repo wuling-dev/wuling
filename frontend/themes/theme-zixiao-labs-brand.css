@@ -37,7 +37,7 @@
   --font-sans: var(--font-inter, system-ui, -apple-system, "Segoe UI", sans-serif);
 }
 
-[data-theme="zixiaolabsvi"].dark {
+[data-theme="zixiao-labs-brand"].dark {
   color-scheme: dark;
   --accent: oklch(60.56% 0.2189 292.71);
   --accent-foreground: oklch(99.11% 0 0);

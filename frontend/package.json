@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nasti dev",
+    "build": "nasti build",
+    "test": "pnpm build && lightning run --config lightning.config.ts",
+    "typecheck": "tsc --noEmit",
+    "start": "node --env-file-if-exists=.env scripts/serve.mjs"
   },
   "keywords": [],
   "author": "Zixiao Laboratories",
@@ -34,6 +38,7 @@
     "@nasti-toolchain/nasti": "^2.6.8",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "typescript": "^7.0.2"
   }
 }
