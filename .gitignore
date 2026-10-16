@@ -1,0 +1,42 @@
+# Local operating-system and editor state
+.DS_Store
+.AppleDouble
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencies, build output, caches, test artifacts
+node_modules/
+target/
+dist/
+.nasti/
+.vite/
+.tanstack/
+.cache/
+.pnpm-store/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
+
+# Credentials and real local deployment configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+.secrets/
+
+# Personal agent sessions; shared instructions are reviewed separately
+.opencode/
+
+
+# Added by cargo
+
+/target

@@ -1,0 +1,5 @@
+permissions:
+  '@tanstack/charts':
+    skills: true
+  '@tanstack/react-start':
+    skills: true
