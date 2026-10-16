@@ -25,7 +25,7 @@ export function tanstackStart(): NastiPlugin {
         },
       }
     },
-    resolveId(id) { if (virtual.has(id)) return '\0wuling:' + id },
+    resolveId(id) { return virtual.has(id) ? '\0wuling:' + id : undefined },
     load(id) {
       if (!id.startsWith('\0wuling:')) return
       const name = id.slice(8)
@@ -36,6 +36,7 @@ export function tanstackStart(): NastiPlugin {
       if (name === 'tanstack-start-manifest:v' || name === 'virtual:wuling-manifest') return development
         ? 'export const tsrStartManifest = () => ({ routes: { __root__: { scripts: [{tag:"script", attrs:{type:"module",src:"/src/client.tsx"}}] } } })'
         : 'export const tsrStartManifest = () => globalThis.__WULING_MANIFEST__'
+      return undefined
     },
     transform(code, id) {
       if (!id.includes('node_modules') && /\bcreateServerFn\s*\(/.test(code)) throw new Error('Native adapter: use Rust REST APIs instead of createServerFn')

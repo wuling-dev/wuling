@@ -1,3 +1,10 @@
 [workspace]
 members = ["crates/server"]
 resolver = "2"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

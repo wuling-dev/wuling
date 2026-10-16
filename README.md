@@ -41,6 +41,12 @@ WULING_ADMIN_TOKEN='<random-secret-at-least-32-characters>' cargo run -p wuling-
 
 ## 验证与依赖归属
 
+开发、构建和单实例运行入口见 [部署说明](deploy/README.md)：
+`sh scripts/dev.sh`、`sh scripts/build.sh`、`sh scripts/start.sh`。
+`sh scripts/check.sh` 串行执行格式、Clippy、Rust 测试、ESLint、TypeScript 和前端测试。
+Nix 开发 shell / app 入口见 `flake.nix`（尚需在装有 Nix 的机器上验证并生成锁文件）。
+功能恢复批次与 gRPC / 协作工作区边界见 [开发计划](plans/plans.md)。
+
 ```sh
 cargo test
 node scripts/licenses.mjs
