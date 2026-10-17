@@ -1,3 +1,6 @@
+packages:
+  - 'packages/*'
+
 permissions:
   '@tanstack/charts':
     skills: true

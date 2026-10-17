@@ -1,0 +1,16 @@
+[package]
+name = "wuling-admin"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+default-run = "wuling-admin"
+
+[lints]
+workspace = true
+
+[dependencies]
+iam = { path = "../iam" }
+rpassword = "7"
+tokio = { version = "1", features = ["rt", "macros"] }
+wuling-import = { path = "../import" }
+wuling-storage = { path = "../storage" }

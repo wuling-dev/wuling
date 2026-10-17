@@ -538,6 +538,27 @@ mod tests {
         (status, serde_json::from_slice(&body).unwrap_or(Value::Null))
     }
     #[tokio::test]
+    async fn rejects_public_registration_and_remote_bootstrap() {
+        let dir =
+            std::env::temp_dir().join(format!("wuling-no-registration-{}", std::process::id()));
+        let app = App::open(dir.clone(), "test-token".into()).await.unwrap();
+        for uri in [
+            "/api/register",
+            "/api/auth/register",
+            "/api/bootstrap",
+            "/api/auth/bootstrap",
+            "/api/users",
+        ] {
+            for auth in [false, true] {
+                let (status, _) =
+                    call(&app, "POST", uri, json!({"username": "intruder"}), auth).await;
+                assert_eq!(status, StatusCode::NOT_FOUND, "{uri}");
+            }
+        }
+        tokio::fs::remove_dir_all(dir).await.unwrap();
+    }
+
+    #[tokio::test]
     async fn collaboration_lifecycle_and_scope() {
         let dir = std::env::temp_dir().join(format!("wuling-collaboration-{}", std::process::id()));
         let app = App::open(dir.clone(), "test-token".into()).await.unwrap();

@@ -15,10 +15,13 @@ trap 'pg_ctl -D "$base/cluster" -m fast -w stop' EXIT
 createdb storage_test
 createdb import_test
 createdb cli_test
+createdb admin_test
 WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=storage_test" \
   cargo test -p wuling-storage --test postgres -- --ignored
 WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=import_test" \
   cargo test -p wuling-import --test postgres -- --ignored
+WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=admin_test" \
+  cargo test -p wuling-admin --test postgres -- --ignored
 
 mkdir -p "$base/original/repos"
 git init --bare --initial-branch=main "$base/original/repos/10.git"
@@ -35,14 +38,14 @@ printf '{"10":1}\n' > "$base/owners.json"
 git --git-dir="$repo" for-each-ref --format='%(refname) %(objectname)' > "$base/refs.before"
 git --git-dir="$repo" symbolic-ref HEAD > "$base/head.before"
 export WULING_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=cli_test"
-cargo run -p wuling-server --bin wuling-db -- migrate
-cargo run -p wuling-server --bin wuling-db -- migrate
+cargo run -p wuling-admin --bin wuling-db -- migrate
+cargo run -p wuling-admin --bin wuling-db -- migrate
 # Test-only owner, deliberately not a valid password hash; not an account bootstrap procedure.
 psql -X -v ON_ERROR_STOP=1 -d cli_test \
   -c "INSERT INTO users (username, password_hash) VALUES ('fixture_owner', '!');"
-cargo run -p wuling-server --bin wuling-db -- import \
+cargo run -p wuling-admin --bin wuling-db -- import \
   "$base/original/state.json" "$base/backup/state.json" "$base/owners.json"
-cargo run -p wuling-server --bin wuling-db -- import \
+cargo run -p wuling-admin --bin wuling-db -- import \
   "$base/original/state.json" "$base/backup/state.json" "$base/owners.json"
 counts=$(psql -X -At -v ON_ERROR_STOP=1 -d cli_test -c \
   "SELECT (SELECT count(*) FROM repositories WHERE id=10 AND owner_id=1 AND NOT public),

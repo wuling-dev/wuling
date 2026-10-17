@@ -1,5 +1,6 @@
 {
   "name": "frontend",
+  "private": true,
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -7,7 +8,7 @@
     "dev": "nasti dev",
     "build": "nasti build",
     "test": "pnpm build && lightning run --config lightning.config.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm --filter './packages/*' --if-present typecheck",
     "lint": "eslint . --max-warnings 0",
     "start": "node --env-file-if-exists=.env scripts/serve.mjs"
   },
@@ -38,6 +39,7 @@
     "@eslint/js": "^10.0.1",
     "@lightning-js/lightning": "^3.1.2",
     "@nasti-toolchain/nasti": "^2.6.8",
+    "@wuling/nasti-tanstack-start": "workspace:*",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

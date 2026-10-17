@@ -33,11 +33,11 @@ cargo test -p wuling-storage --test postgres -- --ignored
 
 ## Migration command
 
-运维入口仍由服务端包提供，不将命令行解析放进数据层：
+运维入口由独立的 `wuling-admin` 包提供，不将命令行解析放进数据层或 HTTP 服务：
 
 ```sh
 export WULING_DATABASE_URL='host=127.0.0.1 port=55432 dbname=wuling'
-cargo run -p wuling-server --bin wuling-db -- migrate
+cargo run -p wuling-admin --bin wuling-db -- migrate
 ```
 
 迁移命令不会读取或改写原型 `state.json`，也不会自动切换 HTTP 服务的数据来源。

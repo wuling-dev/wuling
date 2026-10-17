@@ -1,6 +1,6 @@
 use wuling_storage as storage;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> storage::Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     if args != ["migrate"] && !(args.len() == 4 && args[0] == "import") {

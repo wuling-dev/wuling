@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@lightning-js/lightning'
-import { tanstackStart } from '../packages/nasti-tanstack-start/index'
+import { tanstackStart } from '@wuling/nasti-tanstack-start'
 describe('native Start adapter', () => {
   test('uses native hooks rather than upstream plugins', async () => {
     const plugin = tanstackStart()

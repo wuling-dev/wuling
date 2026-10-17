@@ -3,7 +3,8 @@
 ## Current boundary
 
 数据层已拆为 `wuling-storage`，原型导入为 `wuling-import`。
-`wuling-db` 是离线运维入口；当前 HTTP 原型仍读写 JSON，**设置数据库连接或导入成功不会自动切换 API**。
+`crates/admin` 的 `wuling-db` 是离线运维入口，与 `crates/cli` 的远程客户端分开；
+当前 HTTP 原型仍读写 JSON，**设置数据库连接或导入成功不会自动切换 API**。
 认证、各领域运行时迁移完成前，不应将新库视为可上线的完整替代。
 这里只迁移当前 Rust 原型，不兼容旧 Go 数据库。
 
@@ -18,7 +19,9 @@ sh scripts/check-postgres.sh
 ```
 
 Nix shell 包含 `postgresql_18`，不自动启动数据库，不改写全局 PostgreSQL 配置或系统服务。
-没有 Nix 的机器可直接执行同一脚本；Nix 入口仍需在有 Nix 的机器上单独验证。
+没有 Nix 的机器可直接执行同一脚本。已在 aarch64-darwin 的 Nix shell 中执行同一脚本通过；
+其他平台尚未验证。本次通过 `--no-write-lock-file` 使用 nixpkgs 提交
+`55bfb4d7437bd4e09ab7cba58a43bd68eb310044`，不代表已建立锁定的发布环境。
 
 `sh scripts/check-postgres.sh` 创建工作区 `data/` 下独立的临时集群，仅监听
 `127.0.0.1:55432`，禁用 Unix socket，避免 macOS 长路径限制。端口冲突时先排查占用，
@@ -48,7 +51,7 @@ diff -r data/original data/prototype-backup
 
 ```sh
 export WULING_DATABASE_URL='host=127.0.0.1 port=55432 dbname=wuling'
-cargo run -p wuling-server --bin wuling-db -- migrate
+cargo run -p wuling-admin --bin wuling-db -- migrate
 ```
 
 凭据从本地环境或 `.pgpass` 提供，不写入仓库或共享命令记录。
@@ -61,11 +64,18 @@ cargo run -p wuling-server --bin wuling-db -- migrate
 {"10": 1, "12": 2}
 ```
 
-用户创建入口属于身份任务，尚未交付；不要把验收脚本中的测试用户 SQL 用于正式账号初始化。
-待身份引导可用后，先创建账号，再核对映射中的 ID；不能默认将所有历史记录归到管理员。
+先通过本机运维工具创建账号，再核对映射中的 ID；不能默认将所有历史记录归到管理员：
 
 ```sh
-cargo run -p wuling-server --bin wuling-db -- import \
+cargo run -p wuling-admin -- bootstrap admin
+cargo run -p wuling-admin -- create-user admin alice
+```
+
+密码使用隐藏提示输入，命令输出账号 ID。不要把验收脚本中的测试用户 SQL 用于正式账号初始化。
+首次引导不能重复执行，具体约束见 [本机运维工具](../crates/admin/README.md)。
+
+```sh
+cargo run -p wuling-admin --bin wuling-db -- import \
   data/original/state.json data/prototype-backup/state.json data/owners.json
 ```
 
