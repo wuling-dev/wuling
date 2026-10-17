@@ -13,7 +13,8 @@ TypeScript 7 的 `tsc` 由 `@typescript/native` 别名提供；`typescript` 别�
 官方 TS 6 兼容 API，仅供 typescript-eslint 使用。这是官方建议的并行配置，
 不是把项目类型检查降级到 TS 6。
 
-从环境或密钥管理器注入 `WULING_ADMIN_TOKEN`（至少 32 字符），然后：
+先按 [数据库说明](DATABASE.md) 迁移、引导账号并按需导入原型数据。
+从环境注入 `WULING_DATABASE_URL`、持久 `WULING_JWT_KEYS` 和 `WULING_WEB_ORIGIN`（开发如 `http://localhost:3000`），然后：
 
 ```sh
 sh scripts/dev.sh
@@ -35,13 +36,13 @@ sh scripts/start.sh
 不要在构建阶段注入管理员令牌。SEO 的 `WULING_INDEXABLE` 和
 `WULING_PUBLIC_ORIGIN` 是构建配置，修改后重建；默认禁止索引。
 
-运行阶段注入管理员令牌和绝对路径 `WULING_DATA_DIR`。后端默认监听
+运行阶段注入 `WULING_DATABASE_URL`、持久 `WULING_JWT_KEYS`、HTTPS 的 `WULING_WEB_ORIGIN` 和绝对路径 `WULING_DATA_DIR`。后端默认监听
 `127.0.0.1:4000`，前端默认监听 `127.0.0.1:3000`。
 由同机 HTTPS 反向代理转发到前端；前端代理 `/api/` 到后端。
 不要直接把两个服务绑定公网。部署在专用低权限用户下，限制目录权限、
 请求体大小和请求速率。`start.sh` 是前台入口，长期运行应由系统服务管理并重启。
 
-升级前停止写入并备份 `WULING_DATA_DIR` 整个目录（JSON 元数据和裸 Git 仓库）；
+升级前停止写入，同时备份 PostgreSQL 与 `WULING_DATA_DIR` 整个目录（原 JSON 备份和裸 Git 仓库）；
 在隔离目录验证备份可恢复后再升级。不得多个实例共享该目录。
 
 ## Nix

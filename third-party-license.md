@@ -30,6 +30,13 @@ The project's own license remains [License](License). Brand assets have separate
 | @cacheable/utils | 2.5.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_cacheable_utils@2.5.0) |
 | @eslint-community/eslint-utils | 4.10.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-community_eslint-utils@4.10.1) |
 | @eslint-community/regexpp | 4.12.2 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-community_regexpp@4.12.2) |
+| @eslint-react/ast | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-react_ast@5.27.3) |
+| @eslint-react/core | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-react_core@5.27.3) |
+| @eslint-react/eslint | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-react_eslint@5.27.3) |
+| @eslint-react/eslint-plugin | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-react_eslint-plugin@5.27.3) |
+| @eslint-react/jsx | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-react_jsx@5.27.3) |
+| @eslint-react/shared | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-react_shared@5.27.3) |
+| @eslint-react/var | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint-react_var@5.27.3) |
 | @eslint/config-array | 0.23.5 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint_config-array@0.23.5) |
 | @eslint/config-helpers | 0.7.0 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint_config-helpers@0.7.0) |
 | @eslint/core | 1.2.1 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint_core@1.2.1) |
@@ -158,10 +165,12 @@ The project's own license remains [License](License). Brand assets have separate
 | aria-hidden | 1.2.6 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/aria-hidden@1.2.6) |
 | async-trait | 0.1.92 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/async-trait@0.1.92) |
 | atomic-waker | 1.1.2 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/atomic-waker@1.1.2) |
+| autocfg | 1.5.1 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/autocfg@1.5.1) |
 | axum | 0.8.9 | MIT | Cargo | [notices](licenses/third-party/axum@0.8.9) |
 | axum-core | 0.5.6 | MIT | Cargo | [notices](licenses/third-party/axum-core@0.5.6) |
 | babel-dead-code-elimination | 1.0.12 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/babel-dead-code-elimination@1.0.12) |
 | balanced-match | 4.0.4 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/balanced-match@4.0.4) |
+| base16ct | 0.2.0 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/base16ct@0.2.0) |
 | base64 | 0.22.1 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/base64@0.22.1) |
 | base64ct | 1.8.3 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/base64ct@1.8.3) |
 | baseline-browser-mapping | 2.11.28 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/baseline-browser-mapping@2.11.28) |
@@ -184,17 +193,22 @@ The project's own license remains [License](License). Brand assets have separate
 | client-only | 0.0.1 | MIT | npm (installed; includes tooling) | No root license file; verify upstream |
 | clsx | 2.1.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/clsx@2.1.1) |
 | cmov | 0.5.4 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/cmov@0.5.4) |
+| compare-versions | 6.1.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/compare-versions@6.1.1) |
 | connect | 3.7.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/connect@3.7.0) |
 | const-oid | 0.10.2 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/const-oid@0.10.2) |
+| const-oid | 0.9.6 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/const-oid@0.9.6) |
 | convert-source-map | 2.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/convert-source-map@2.0.0) |
 | cookie-es | 3.1.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/cookie-es@3.1.1) |
 | cpufeatures | 0.2.17 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/cpufeatures@0.2.17) |
 | cpufeatures | 0.3.1 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/cpufeatures@0.3.1) |
 | cross-spawn | 7.0.6 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/cross-spawn@7.0.6) |
+| crypto-bigint | 0.5.5 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/crypto-bigint@0.5.5) |
 | crypto-common | 0.1.7 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/crypto-common@0.1.7) |
 | crypto-common | 0.2.2 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/crypto-common@0.2.2) |
 | csstype | 3.2.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/csstype@3.2.3) |
 | ctutils | 0.4.3 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/ctutils@0.4.3) |
+| curve25519-dalek | 4.1.3 | BSD-3-Clause | Cargo | [notices](licenses/third-party/curve25519-dalek@4.1.3) |
+| curve25519-dalek-derive | 0.1.1 | MIT/Apache-2.0 | Cargo | [notices](licenses/third-party/curve25519-dalek-derive@0.1.1) |
 | d3-array | 2.12.1 | BSD-3-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/d3-array@2.12.1) |
 | d3-array | 3.2.4 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/d3-array@3.2.4) |
 | d3-brush | 3.0.0 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/d3-brush@3.0.0) |
@@ -227,14 +241,19 @@ The project's own license remains [License](License). Brand assets have separate
 | debug | 4.4.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/debug@4.4.3) |
 | deep-is | 0.1.4 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/deep-is@0.1.4) |
 | delaunator | 5.1.0 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/delaunator@5.1.0) |
+| der | 0.7.10 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/der@0.7.10) |
 | detect-libc | 2.1.2 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/detect-libc@2.1.2) |
 | diff | 9.0.0 | BSD-3-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/diff@9.0.0) |
 | digest | 0.10.7 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/digest@0.10.7) |
 | digest | 0.11.3 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/digest@0.11.3) |
 | dom-helpers | 5.2.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/dom-helpers@5.2.1) |
 | dotenv | 18.0.8 | BSD-2-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/dotenv@18.0.8) |
+| ecdsa | 0.16.9 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/ecdsa@0.16.9) |
+| ed25519 | 2.2.3 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/ed25519@2.2.3) |
+| ed25519-dalek | 2.2.0 | BSD-3-Clause | Cargo | [notices](licenses/third-party/ed25519-dalek@2.2.0) |
 | ee-first | 1.1.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/ee-first@1.1.1) |
 | electron-to-chromium | 1.5.456 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/electron-to-chromium@1.5.456) |
+| elliptic-curve | 0.13.8 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/elliptic-curve@0.13.8) |
 | encodeurl | 1.0.2 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/encodeurl@1.0.2) |
 | entities | 7.0.1 | BSD-2-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/entities@7.0.1) |
 | errno | 0.3.14 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/errno@0.3.14) |
@@ -242,6 +261,12 @@ The project's own license remains [License](License). Brand assets have separate
 | escape-html | 1.0.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/escape-html@1.0.3) |
 | escape-string-regexp | 4.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/escape-string-regexp@4.0.0) |
 | eslint | 10.12.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/eslint@10.12.0) |
+| eslint-plugin-react-dom | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-plugin-react-dom@5.27.3) |
+| eslint-plugin-react-jsx | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-plugin-react-jsx@5.27.3) |
+| eslint-plugin-react-naming-convention | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-plugin-react-naming-convention@5.27.3) |
+| eslint-plugin-react-rsc | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-plugin-react-rsc@5.27.3) |
+| eslint-plugin-react-web-api | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-plugin-react-web-api@5.27.3) |
+| eslint-plugin-react-x | 5.27.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-plugin-react-x@5.27.3) |
 | eslint-scope | 9.1.2 | BSD-2-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-scope@9.1.2) |
 | eslint-visitor-keys | 3.4.3 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-visitor-keys@3.4.3) |
 | eslint-visitor-keys | 5.0.1 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/eslint-visitor-keys@5.0.1) |
@@ -259,6 +284,8 @@ The project's own license remains [License](License). Brand assets have separate
 | fast-levenshtein | 2.0.6 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/fast-levenshtein@2.0.6) |
 | fdir | 6.5.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/fdir@6.5.0) |
 | fetchdts | 0.2.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/fetchdts@0.2.0) |
+| ff | 0.13.1 | MIT/Apache-2.0 | Cargo | [notices](licenses/third-party/ff@0.13.1) |
+| fiat-crypto | 0.2.9 | MIT OR Apache-2.0 OR BSD-1-Clause | Cargo | [notices](licenses/third-party/fiat-crypto@0.2.9) |
 | file-entry-cache | 11.1.5 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/file-entry-cache@11.1.5) |
 | finalhandler | 1.1.2 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/finalhandler@1.1.2) |
 | find-up | 5.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/find-up@5.0.0) |
@@ -276,8 +303,11 @@ The project's own license remains [License](License). Brand assets have separate
 | getrandom | 0.4.3 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/getrandom@0.4.3) |
 | glob-parent | 6.0.2 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/glob-parent@6.0.2) |
 | globals | 17.13.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/globals@17.13.0) |
+| group | 0.13.0 | MIT/Apache-2.0 | Cargo | [notices](licenses/third-party/group@0.13.0) |
 | has-flag | 4.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/has-flag@4.0.0) |
 | hashery | 1.5.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/hashery@1.5.1) |
+| hkdf | 0.12.4 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/hkdf@0.12.4) |
+| hmac | 0.12.1 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/hmac@0.12.1) |
 | hmac | 0.13.0 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/hmac@0.13.0) |
 | hookified | 1.15.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/hookified@1.15.1) |
 | hookified | 2.2.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/hookified@2.2.0) |
@@ -314,9 +344,12 @@ The project's own license remains [License](License). Brand assets have separate
 | json-schema-traverse | 0.4.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/json-schema-traverse@0.4.1) |
 | json-stable-stringify-without-jsonify | 1.0.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/json-stable-stringify-without-jsonify@1.0.1) |
 | json5 | 2.2.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/json5@2.2.3) |
+| jsonwebtoken | 10.4.0 | MIT | Cargo | [notices](licenses/third-party/jsonwebtoken@10.4.0) |
 | keyv | 5.6.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/keyv@5.6.0) |
+| lazy_static | 1.5.1 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/lazy_static@1.5.1) |
 | levn | 0.4.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/levn@0.4.1) |
 | libc | 0.2.190 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/libc@0.2.190) |
+| libm | 0.2.16 | MIT | Cargo | [notices](licenses/third-party/libm@0.2.16) |
 | libredox | 0.1.25 | MIT | Cargo | [notices](licenses/third-party/libredox@0.1.25) |
 | lightningcss | 1.33.0 | MPL-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/lightningcss@1.33.0) |
 | lightningcss-darwin-arm64 | 1.33.0 | MPL-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/lightningcss-darwin-arm64@1.33.0) |
@@ -339,6 +372,10 @@ The project's own license remains [License](License). Brand assets have separate
 | nanoid | 3.3.20 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/nanoid@3.3.20) |
 | natural-compare | 1.4.0 | MIT | npm (installed; includes tooling) | No root license file; verify upstream |
 | node-releases | 2.0.59 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/node-releases@2.0.59) |
+| num-bigint-dig | 0.8.6 | MIT/Apache-2.0 | Cargo | [notices](licenses/third-party/num-bigint-dig@0.8.6) |
+| num-integer | 0.1.47 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/num-integer@0.1.47) |
+| num-iter | 0.1.46 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/num-iter@0.1.46) |
+| num-traits | 0.2.19 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/num-traits@0.2.19) |
 | objc2-core-foundation | 0.3.2 | Zlib OR Apache-2.0 OR MIT | Cargo | No root license file; verify upstream |
 | objc2-system-configuration | 0.3.2 | Zlib OR Apache-2.0 OR MIT | Cargo | No root license file; verify upstream |
 | object-assign | 4.1.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/object-assign@4.1.1) |
@@ -350,6 +387,8 @@ The project's own license remains [License](License). Brand assets have separate
 | oxc-transform | 0.153.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/oxc-transform@0.153.0) |
 | p-limit | 3.1.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/p-limit@3.1.0) |
 | p-locate | 5.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/p-locate@5.0.0) |
+| p256 | 0.13.2 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/p256@0.13.2) |
+| p384 | 0.13.1 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/p384@0.13.1) |
 | parking_lot | 0.12.5 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/parking_lot@0.12.5) |
 | parking_lot_core | 0.9.12 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/parking_lot_core@0.9.12) |
 | parseurl | 1.3.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/parseurl@1.3.3) |
@@ -357,17 +396,22 @@ The project's own license remains [License](License). Brand assets have separate
 | path-exists | 4.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/path-exists@4.0.0) |
 | path-key | 3.1.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/path-key@3.1.1) |
 | pathe | 2.0.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/pathe@2.0.3) |
+| pem-rfc7468 | 0.7.0 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/pem-rfc7468@0.7.0) |
 | percent-encoding | 2.3.2 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/percent-encoding@2.3.2) |
 | phf | 0.13.1 | MIT | Cargo | [notices](licenses/third-party/phf@0.13.1) |
 | phf_shared | 0.13.1 | MIT | Cargo | [notices](licenses/third-party/phf_shared@0.13.1) |
 | picocolors | 1.1.1 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/picocolors@1.1.1) |
 | picomatch | 4.0.7 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/picomatch@4.0.7) |
 | pin-project-lite | 0.2.17 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/pin-project-lite@0.2.17) |
+| pkcs1 | 0.7.5 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/pkcs1@0.7.5) |
+| pkcs8 | 0.10.2 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/pkcs8@0.10.2) |
 | postcss | 8.5.30 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/postcss@8.5.30) |
 | postgres-protocol | 0.6.12 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/postgres-protocol@0.6.12) |
 | postgres-types | 0.2.14 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/postgres-types@0.2.14) |
+| ppv-lite86 | 0.2.21 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/ppv-lite86@0.2.21) |
 | prelude-ls | 1.2.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/prelude-ls@1.2.1) |
 | prettier | 3.9.10 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/prettier@3.9.10) |
+| primeorder | 0.13.6 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/primeorder@0.13.6) |
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/proc-macro2@1.0.107) |
 | prop-types | 15.8.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/prop-types@15.8.1) |
 | punycode | 2.3.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/punycode@2.3.1) |
@@ -375,6 +419,8 @@ The project's own license remains [License](License). Brand assets have separate
 | quote | 1.0.47 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/quote@1.0.47) |
 | r-efi | 6.0.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | Cargo | No root license file; verify upstream |
 | rand | 0.10.3 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/rand@0.10.3) |
+| rand | 0.8.8 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/rand@0.8.8) |
+| rand_chacha | 0.3.1 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/rand_chacha@0.3.1) |
 | rand_core | 0.10.1 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/rand_core@0.10.1) |
 | rand_core | 0.6.4 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/rand_core@0.6.4) |
 | react | 19.3.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/react@19.3.1) |
@@ -387,15 +433,20 @@ The project's own license remains [License](License). Brand assets have separate
 | react-transition-group | 4.4.5 | BSD-3-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/react-transition-group@4.4.5) |
 | readdirp | 5.1.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/readdirp@5.1.1) |
 | redox_syscall | 0.5.18 | MIT | Cargo | [notices](licenses/third-party/redox_syscall@0.5.18) |
+| rfc6979 | 0.4.0 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/rfc6979@0.4.0) |
 | robust-predicates | 3.0.3 | Unlicense | npm (installed; includes tooling) | [notices](licenses/third-party/robust-predicates@3.0.3) |
 | rolldown | 1.2.13 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/rolldown@1.2.13) |
 | rolldown | 1.2.6 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/rolldown@1.2.6) |
 | rpassword | 7.5.4 | Apache-2.0 | Cargo | [notices](licenses/third-party/rpassword@7.5.4) |
+| rsa | 0.9.10 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/rsa@0.9.10) |
 | rtoolbox | 0.0.6 | Apache-2.0 | Cargo | [notices](licenses/third-party/rtoolbox@0.0.6) |
+| rustc_version | 0.4.1 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/rustc_version@0.4.1) |
 | rustversion | 1.0.23 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/rustversion@1.0.23) |
 | ryu | 1.0.23 | Apache-2.0 OR BSL-1.0 | Cargo | [notices](licenses/third-party/ryu@1.0.23) |
 | scheduler | 0.28.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/scheduler@0.28.0) |
 | scopeguard | 1.2.0 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/scopeguard@1.2.0) |
+| sec1 | 0.7.3 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/sec1@0.7.3) |
+| semver | 1.0.28 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/semver@1.0.28) |
 | semver | 6.3.1 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/semver@6.3.1) |
 | semver | 7.8.5 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/semver@7.8.5) |
 | serde | 1.0.229 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/serde@1.0.229) |
@@ -406,10 +457,12 @@ The project's own license remains [License](License). Brand assets have separate
 | serde_urlencoded | 0.7.1 | MIT/Apache-2.0 | Cargo | [notices](licenses/third-party/serde_urlencoded@0.7.1) |
 | seroval | 1.6.9 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/seroval@1.6.9) |
 | seroval-plugins | 1.6.9 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/seroval-plugins@1.6.9) |
+| sha2 | 0.10.9 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/sha2@0.10.9) |
 | sha2 | 0.11.1 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/sha2@0.11.1) |
 | shebang-command | 2.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/shebang-command@2.0.0) |
 | shebang-regex | 3.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/shebang-regex@3.0.0) |
 | signal-hook-registry | 1.4.8 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/signal-hook-registry@1.4.8) |
+| signature | 2.2.0 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/signature@2.2.0) |
 | siphasher | 1.0.4 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/siphasher@1.0.4) |
 | sirv | 3.0.2 | MIT | npm (installed; includes tooling) | No root license file; verify upstream |
 | slab | 0.4.12 | MIT | Cargo | [notices](licenses/third-party/slab@0.4.12) |
@@ -417,11 +470,15 @@ The project's own license remains [License](License). Brand assets have separate
 | socket2 | 0.6.5 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/socket2@0.6.5) |
 | source-map | 0.7.6 | BSD-3-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/source-map@0.7.6) |
 | source-map-js | 1.2.2 | BSD-3-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/source-map-js@1.2.2) |
+| spin | 0.9.9 | MIT | Cargo | [notices](licenses/third-party/spin@0.9.9) |
+| spki | 0.7.3 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/spki@0.7.3) |
 | srvx | 1.0.5 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/srvx@1.0.5) |
 | statuses | 1.5.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/statuses@1.5.0) |
+| string-ts | 2.3.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/string-ts@2.3.1) |
 | stringprep | 0.1.5 | MIT/Apache-2.0 | Cargo | [notices](licenses/third-party/stringprep@0.1.5) |
 | subtle | 2.6.1 | BSD-3-Clause | Cargo | [notices](licenses/third-party/subtle@2.6.1) |
 | supports-color | 7.2.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/supports-color@7.2.0) |
+| syn | 2.0.119 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/syn@2.0.119) |
 | syn | 3.0.9 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/syn@3.0.9) |
 | sync_wrapper | 1.0.2 | Apache-2.0 | Cargo | [notices](licenses/third-party/sync_wrapper@1.0.2) |
 | tailwind-variants | 3.3.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/tailwind-variants@3.3.1) |
@@ -441,6 +498,7 @@ The project's own license remains [License](License). Brand assets have separate
 | tracing | 0.1.44 | MIT | Cargo | [notices](licenses/third-party/tracing@0.1.44) |
 | tracing-core | 0.1.36 | MIT | Cargo | [notices](licenses/third-party/tracing-core@0.1.36) |
 | ts-api-utils | 2.5.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/ts-api-utils@2.5.0) |
+| ts-pattern | 5.9.2 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/ts-pattern@5.9.2) |
 | tslib | 2.8.1 | 0BSD | npm (installed; includes tooling) | [notices](licenses/third-party/tslib@2.8.1) |
 | tw-animate-css | 1.4.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/tw-animate-css@1.4.0) |
 | type-check | 0.4.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/type-check@0.4.0) |
@@ -483,5 +541,9 @@ The project's own license remains [License](License). Brand assets have separate
 | xmlbuilder2 | 4.0.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/xmlbuilder2@4.0.3) |
 | yallist | 3.1.1 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/yallist@3.1.1) |
 | yocto-queue | 0.1.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/yocto-queue@0.1.0) |
+| zerocopy | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/zerocopy@0.8.63) |
+| zerocopy-derive | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/zerocopy-derive@0.8.63) |
+| zeroize | 1.9.1 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/zeroize@1.9.1) |
+| zeroize_derive | 1.5.0 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/zeroize_derive@1.5.0) |
 | zmij | 1.0.23 | MIT | Cargo | [notices](licenses/third-party/zmij@1.0.23) |
 | zod | 4.6.7 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/zod@4.6.7) |

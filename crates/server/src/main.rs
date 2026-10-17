@@ -1,13 +1,17 @@
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::{HeaderMap, StatusCode},
-    routing::get,
+    http::{HeaderMap, StatusCode, header},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::{get, post},
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{path::PathBuf, sync::Arc};
-use tokio::{process::Command, sync::Mutex};
+use tokio::process::Command;
+use tokio_postgres::Client;
+use wuling_storage::identity::User;
 
 type Error = (StatusCode, Json<Value>);
 type Result<T> = std::result::Result<T, Error>;
@@ -15,98 +19,113 @@ fn error(status: StatusCode, message: &str) -> Error {
     (status, Json(json!({"error": message})))
 }
 fn internal(_: impl std::fmt::Display) -> Error {
-    error(StatusCode::INTERNAL_SERVER_ERROR, "存储或 Git 操作失败")
+    error(StatusCode::INTERNAL_SERVER_ERROR, "数据库或 Git 操作失败")
 }
-fn valid_name(value: &str) -> bool {
-    !value.is_empty()
-        && value.len() <= 80
-        && value
-            .bytes()
-            .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
+fn unauthorized() -> Error {
+    error(StatusCode::UNAUTHORIZED, "需要有效登录会话")
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-struct Repo {
-    id: u64,
-    name: String,
-    description: String,
-    public: bool,
-}
-#[derive(Clone, Serialize, Deserialize)]
-struct Item {
-    id: u64,
-    repo_id: u64,
-    kind: String,
-    title: String,
-    body: String,
-    state: String,
-    source: Option<String>,
-    target: Option<String>,
-}
-#[derive(Clone, Default, Serialize, Deserialize)]
-struct Database {
-    repos: Vec<Repo>,
-    items: Vec<Item>,
-    next_id: u64,
-}
 #[derive(Clone)]
 struct App {
-    db: Arc<Mutex<Database>>,
+    db: Arc<Client>,
     root: PathBuf,
-    token: Arc<String>,
+    origin: Arc<String>,
+    database_url: Arc<String>,
+    secure: bool,
+    jwt: Arc<iam::web::Jwt>,
+    session_days: i32,
 }
 impl App {
-    async fn open(root: PathBuf, token: String) -> std::io::Result<Self> {
+    async fn open(root: PathBuf, url: &str, origin: String) -> wuling_storage::Result<Self> {
+        let jwt = iam::web::Jwt::from_config(&std::env::var("WULING_JWT_KEYS")?, &origin)?;
+        let days = std::env::var("WULING_WEB_SESSION_DAYS")
+            .unwrap_or_else(|_| "30".into())
+            .parse()?;
+        Self::open_with_jwt(root, url, origin, jwt, days).await
+    }
+    async fn open_with_jwt(
+        root: PathBuf,
+        url: &str,
+        origin: String,
+        jwt: iam::web::Jwt,
+        session_days: i32,
+    ) -> wuling_storage::Result<Self> {
+        if !(1..=90).contains(&session_days) {
+            return Err("WULING_WEB_SESSION_DAYS 须为1–90天".into());
+        }
+        // 配置只接受精确 origin，不信任 Host / X-Forwarded-* 来决定写请求来源。
+        let parsed: axum::http::Uri = origin.parse()?;
+        let secure = parsed.scheme_str() == Some("https");
+        if !valid_origin(&origin) {
+            return Err(
+                "WULING_WEB_ORIGIN 须为 HTTPS origin 或本机 HTTP origin（无尾斜杠）".into(),
+            );
+        }
+        let db = wuling_storage::connect_local(url).await?;
+        // 启动不隐式迁移；缺表时直接失败，不回退 JSON 或管理员令牌。
+        db.simple_query("SELECT id FROM web_sessions LIMIT 0; SELECT digest FROM web_refresh_tokens LIMIT 0; SELECT id FROM repositories LIMIT 0; SELECT id FROM historical_items LIMIT 0; SELECT id FROM personal_tokens LIMIT 0")
+            .await?;
         tokio::fs::create_dir_all(root.join("repos")).await?;
-        let db = match tokio::fs::read(root.join("state.json")).await {
-            Ok(data) => serde_json::from_slice(&data)?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Database::default(),
-            Err(e) => return Err(e),
-        };
         Ok(Self {
-            db: Arc::new(Mutex::new(db)),
+            db: Arc::new(db),
             root,
-            token: Arc::new(token),
+            origin: Arc::new(origin),
+            database_url: Arc::new(url.into()),
+            secure,
+            jwt: Arc::new(jwt),
+            session_days,
         })
     }
-    async fn save(&self, db: &Database) -> Result<()> {
-        let tmp = self.root.join("state.json.tmp");
-        tokio::fs::write(&tmp, serde_json::to_vec_pretty(db).map_err(internal)?)
+
+    async fn user(&self, headers: &HeaderMap) -> Result<Option<User>> {
+        let Some(token) = cookie(headers) else {
+            return Ok(None);
+        };
+        iam::web::user(self.db.as_ref(), &self.jwt, token)
             .await
-            .map_err(internal)?;
-        tokio::fs::rename(tmp, self.root.join("state.json"))
-            .await
-            .map_err(internal)
+            .map_err(internal)?
+            .map(Some)
+            .ok_or_else(unauthorized)
     }
-    fn authorized(&self, headers: &HeaderMap) -> bool {
-        headers.get("authorization").and_then(|h| h.to_str().ok())
-            == Some(&format!("Bearer {}", self.token))
-    }
-    fn write(&self, headers: &HeaderMap) -> Result<()> {
-        if self.authorized(headers) {
-            Ok(())
-        } else {
-            Err(error(StatusCode::UNAUTHORIZED, "需要管理员访问令牌"))
-        }
-    }
-    async fn repo(&self, id: u64, headers: &HeaderMap) -> Result<Repo> {
-        self.db
-            .lock()
-            .await
-            .repos
-            .iter()
-            .find(|r| r.id == id && (r.public || self.authorized(headers)))
-            .cloned()
+
+    async fn repo(&self, id: i64, headers: &HeaderMap) -> Result<Value> {
+        let user = self.read_user(headers).await?;
+        let uid = user.map(|u| u.id);
+        self.db.query_opt(
+            "SELECT row_to_json(r) FROM repositories r WHERE r.id=$1 AND
+             (r.public OR r.owner_id=$2 OR EXISTS (SELECT 1 FROM repository_members m WHERE m.repo_id=r.id AND m.user_id=$2))",
+            &[&id, &uid],
+        ).await.map_err(internal)?
+            .map(|r| r.get::<_, Value>(0))
             .ok_or_else(|| error(StatusCode::NOT_FOUND, "仓库不存在"))
     }
-    async fn git(&self, id: u64, args: &[&str]) -> Result<String> {
-        let output = Command::new("git")
+
+    async fn read_user(&self, headers: &HeaderMap) -> Result<Option<User>> {
+        if let Some(token) = headers
+            .get(header::AUTHORIZATION)
+            .and_then(|h| h.to_str().ok())
+            .and_then(|h| h.strip_prefix("Bearer wlp_"))
+        {
+            return iam::pat::authenticate(self.db.as_ref(), &format!("wlp_{token}"))
+                .await
+                .map_err(internal)?
+                .map(|(u, _)| Some(u))
+                .ok_or_else(unauthorized);
+        }
+        self.user(headers).await
+    }
+
+    async fn git(&self, id: i64, args: &[&str]) -> Result<String> {
+        let mut command = Command::new("git");
+        command
             .arg("--git-dir")
             .arg(self.root.join("repos").join(format!("{id}.git")))
             .args(args)
             .env("GIT_TERMINAL_PROMPT", "0")
-            .output()
+            .kill_on_drop(true);
+        let output = tokio::time::timeout(std::time::Duration::from_secs(15), command.output())
             .await
+            .map_err(internal)?
             .map_err(internal)?;
         if !output.status.success() {
             return Err(error(
@@ -118,6 +137,200 @@ impl App {
     }
 }
 
+fn cookie(headers: &HeaderMap) -> Option<&str> {
+    named_cookie(headers, "wuling_session")
+}
+fn named_cookie<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
+    let mut matches = headers
+        .get_all(header::COOKIE)
+        .iter()
+        .filter_map(|h| h.to_str().ok())
+        .flat_map(|h| h.split(';'))
+        .filter_map(|part| part.trim().split_once('='))
+        .filter(|(key, _)| *key == name)
+        .map(|(_, value)| value);
+    let first = matches.next()?;
+    if matches.next().is_some() {
+        None
+    } else {
+        Some(first)
+    }
+}
+
+fn valid_origin(origin: &str) -> bool {
+    let Ok(uri) = origin.parse::<axum::http::Uri>() else {
+        return false;
+    };
+    let Some(authority) = uri.authority() else {
+        return false;
+    };
+    // Authority 解析允许非数字或越界端口；显式端口必须能表示为 u16。
+    let host = authority.host();
+    let Some(suffix) = authority.as_str().strip_prefix(host) else {
+        return false;
+    };
+    let valid_port = suffix.is_empty()
+        || suffix.strip_prefix(':').is_some_and(|port| {
+            !port.is_empty()
+                && port.bytes().all(|byte| byte.is_ascii_digit())
+                && port.parse::<u16>().is_ok()
+        });
+    let allowed = uri.scheme_str() == Some("https")
+        || (uri.scheme_str() == Some("http")
+            && matches!(uri.host(), Some("localhost" | "127.0.0.1")));
+    allowed
+        && valid_port
+        && !authority.as_str().contains('@')
+        && !origin.contains(['?', '#'])
+        && origin == format!("{}://{}", uri.scheme_str().unwrap_or_default(), authority)
+}
+
+async fn boundary(State(app): State<App>, request: axum::extract::Request, next: Next) -> Response {
+    let mut response = if !matches!(
+        *request.method(),
+        axum::http::Method::GET | axum::http::Method::HEAD | axum::http::Method::OPTIONS
+    ) && request
+        .headers()
+        .get(header::ORIGIN)
+        .and_then(|v| v.to_str().ok())
+        != Some(app.origin.as_str())
+    {
+        error(StatusCode::FORBIDDEN, "写请求必须来自 WULING_WEB_ORIGIN").into_response()
+    } else {
+        next.run(request).await
+    };
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, "private, no-store".parse().unwrap());
+    response
+        .headers_mut()
+        .insert(header::VARY, "Cookie".parse().unwrap());
+    response
+}
+
+#[derive(Deserialize)]
+struct Login {
+    username: String,
+    password: String,
+}
+async fn login(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Json(input): Json<Login>,
+) -> Result<Response> {
+    let user = iam::authenticate(&app.db, &input.username, input.password)
+        .await
+        .map_err(|_| unauthorized())?;
+    let mut db = wuling_storage::connect_local(&app.database_url)
+        .await
+        .map_err(internal)?;
+    let credentials = iam::web::start(
+        &mut db,
+        &app.jwt,
+        user.id,
+        app.session_days,
+        cookie(&headers),
+        named_cookie(&headers, "wuling_refresh"),
+    )
+    .await
+    .map_err(internal)?;
+    let mut response = Json(user).into_response();
+    credential_cookies(&mut response, &app, Some(&credentials));
+    Ok(response)
+}
+async fn me(State(app): State<App>, headers: HeaderMap) -> Result<Json<User>> {
+    Ok(Json(app.user(&headers).await?.ok_or_else(unauthorized)?))
+}
+async fn logout(State(app): State<App>, headers: HeaderMap) -> Result<Response> {
+    iam::web::revoke(
+        app.db.as_ref(),
+        &app.jwt,
+        cookie(&headers),
+        named_cookie(&headers, "wuling_refresh"),
+    )
+    .await
+    .map_err(internal)?;
+    let mut response = StatusCode::NO_CONTENT.into_response();
+    credential_cookies(&mut response, &app, None);
+    Ok(response)
+}
+async fn refresh(State(app): State<App>, headers: HeaderMap) -> Result<Response> {
+    let credentials = if let Some(token) = named_cookie(&headers, "wuling_refresh") {
+        let mut db = wuling_storage::connect_local(&app.database_url)
+            .await
+            .map_err(internal)?;
+        iam::web::refresh(&mut db, &app.jwt, token)
+            .await
+            .map_err(internal)?
+    } else {
+        None
+    };
+    let mut response = if credentials.is_some() {
+        StatusCode::NO_CONTENT.into_response()
+    } else {
+        unauthorized().into_response()
+    };
+    credential_cookies(&mut response, &app, credentials.as_ref());
+    Ok(response)
+}
+fn credential_cookies(
+    response: &mut Response,
+    app: &App,
+    credentials: Option<&iam::web::Credentials>,
+) {
+    let access = credentials.map_or("", |c| c.access.as_str());
+    let refresh = credentials.map_or("", |c| c.refresh.as_str());
+    let ttl = credentials.map_or(0, |c| c.refresh_seconds);
+    let secure = if app.secure { "; Secure" } else { "" };
+    for value in [
+        format!(
+            "wuling_session={access}; Path=/; HttpOnly; SameSite=Strict; Max-Age={}{}",
+            ttl.min(iam::web::ACCESS_SECONDS),
+            secure
+        ),
+        format!(
+            "wuling_refresh={refresh}; Path=/api/auth; HttpOnly; SameSite=Strict; Max-Age={ttl}{secure}"
+        ),
+    ] {
+        response
+            .headers_mut()
+            .append(header::SET_COOKIE, value.parse().expect("受控 Cookie 字符"));
+    }
+}
+async fn disable_user(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+) -> Result<StatusCode> {
+    let admin = app.user(&headers).await?.ok_or_else(unauthorized)?;
+    if !admin.admin {
+        return Err(error(StatusCode::FORBIDDEN, "需要管理员身份"));
+    }
+    // 单 SQL 中更新状态和撤销会话，重新启用也不会恢复旧凭据。
+    app.db
+        .execute(
+            "WITH disabled AS (UPDATE users SET active=false WHERE id=$1
+         AND EXISTS (SELECT 1 FROM users WHERE id=$2 AND active AND admin) RETURNING id)
+         UPDATE web_sessions SET revoked_at=now() WHERE user_id IN (SELECT id FROM disabled)",
+            &[&id, &admin.id],
+        )
+        .await
+        .map_err(internal)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+async fn repos(State(app): State<App>, headers: HeaderMap) -> Result<Json<Value>> {
+    let uid = app.read_user(&headers).await?.map(|u| u.id);
+    let rows = app.db.query(
+        "SELECT row_to_json(r) FROM repositories r WHERE r.public OR r.owner_id=$1
+         OR EXISTS (SELECT 1 FROM repository_members m WHERE m.repo_id=r.id AND m.user_id=$1) ORDER BY r.id",
+        &[&uid],
+    ).await.map_err(internal)?;
+    Ok(Json(json!(
+        rows.iter()
+            .map(|r| r.get::<_, Value>(0))
+            .collect::<Vec<_>>()
+    )))
+}
 #[derive(Deserialize)]
 struct NewRepo {
     name: String,
@@ -126,71 +339,80 @@ struct NewRepo {
     #[serde(default)]
     public: bool,
 }
-async fn repos(State(app): State<App>, headers: HeaderMap) -> Json<Value> {
-    Json(json!(
-        app.db
-            .lock()
-            .await
-            .repos
-            .iter()
-            .filter(|r| r.public || app.authorized(&headers))
-            .collect::<Vec<_>>()
-    ))
-}
 async fn create_repo(
     State(app): State<App>,
     headers: HeaderMap,
     Json(input): Json<NewRepo>,
-) -> Result<(StatusCode, Json<Repo>)> {
-    app.write(&headers)?;
-    if !valid_name(&input.name) || input.description.len() > 2000 {
-        return Err(error(
-            StatusCode::BAD_REQUEST,
-            "仓库名仅支持字母、数字、下划线和短横线（最多80字符）",
-        ));
-    }
-    let mut db = app.db.lock().await;
-    if db
-        .repos
-        .iter()
-        .any(|r| r.name.eq_ignore_ascii_case(&input.name))
+) -> Result<(StatusCode, Json<Value>)> {
+    let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
+    if input.name.is_empty()
+        || input.name.len() > 80
+        || !input
+            .name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        || input.description.len() > 2000
     {
-        return Err(error(StatusCode::CONFLICT, "仓库名已存在"));
+        return Err(error(StatusCode::BAD_REQUEST, "无效仓库名或描述"));
     }
-    let id = db.next_id + 1;
+    let mut db = wuling_storage::connect_local(&app.database_url)
+        .await
+        .map_err(internal)?;
+    let tx = db.transaction().await.map_err(internal)?;
+    if tx
+        .query_opt(
+            "SELECT id FROM users WHERE id=$1 AND active FOR SHARE",
+            &[&user.id],
+        )
+        .await
+        .map_err(internal)?
+        .is_none()
+    {
+        return Err(unauthorized());
+    }
+    let row = tx.query_one(
+        "INSERT INTO repositories(owner_id,name,description,public) VALUES($1,$2,$3,$4) RETURNING id",
+        &[&user.id,&input.name,&input.description,&input.public],
+    ).await.map_err(|e| {
+        if e.code()==Some(&tokio_postgres::error::SqlState::UNIQUE_VIOLATION) {
+            error(StatusCode::CONFLICT,"仓库名已存在")
+        } else { internal(e) }
+    })?;
+    let id: i64 = row.get(0);
     let path = app.root.join("repos").join(format!("{id}.git"));
+    // 不覆盖磁盘已有目录；导入必须先完成，Git/SQL 失败遗留需由部署者核对。
+    tokio::fs::create_dir(&path).await.map_err(internal)?;
     let output = Command::new("git")
         .args(["init", "--bare", "--initial-branch=main"])
         .arg(&path)
+        .kill_on_drop(true)
         .output()
         .await
         .map_err(internal)?;
     if !output.status.success() {
         return Err(internal("git init"));
     }
-    let repo = Repo {
-        id,
-        name: input.name,
-        description: input.description,
-        public: input.public,
-    };
-    let mut next = db.clone();
-    next.next_id = id;
-    next.repos.push(repo.clone());
-    app.save(&next).await?;
-    *db = next;
+    let repo: Value = tx
+        .query_one(
+            "SELECT row_to_json(r) FROM repositories r WHERE id=$1",
+            &[&id],
+        )
+        .await
+        .map_err(internal)?
+        .get(0);
+    tx.commit().await.map_err(internal)?;
     Ok((StatusCode::CREATED, Json(repo)))
 }
 async fn repo(
     State(app): State<App>,
-    Path(id): Path<u64>,
+    Path(id): Path<i64>,
     headers: HeaderMap,
-) -> Result<Json<Repo>> {
+) -> Result<Json<Value>> {
     Ok(Json(app.repo(id, &headers).await?))
 }
 async fn branches(
     State(app): State<App>,
-    Path(id): Path<u64>,
+    Path(id): Path<i64>,
     headers: HeaderMap,
 ) -> Result<Json<Value>> {
     app.repo(id, &headers).await?;
@@ -227,28 +449,30 @@ fn check_ref(branch: &str) -> Result<()> {
 }
 async fn tree(
     State(app): State<App>,
-    Path(id): Path<u64>,
+    Path(id): Path<i64>,
     headers: HeaderMap,
     axum::extract::Query(q): axum::extract::Query<GitQuery>,
 ) -> Result<Json<Value>> {
     app.repo(id, &headers).await?;
     check_ref(&q.branch)?;
-    let result = app
-        .git(
+    Ok(Json(json!(
+        app.git(
             id,
             &[
                 "ls-tree",
                 "-r",
                 "--name-only",
-                &format!("refs/heads/{}", q.branch),
-            ],
+                &format!("refs/heads/{}", q.branch)
+            ]
         )
-        .await?;
-    Ok(Json(json!(result.lines().collect::<Vec<_>>())))
+        .await?
+        .lines()
+        .collect::<Vec<_>>()
+    )))
 }
 async fn blob(
     State(app): State<App>,
-    Path(id): Path<u64>,
+    Path(id): Path<i64>,
     headers: HeaderMap,
     axum::extract::Query(q): axum::extract::Query<GitQuery>,
 ) -> Result<Json<Value>> {
@@ -258,33 +482,22 @@ async fn blob(
         return Err(error(StatusCode::BAD_REQUEST, "无效文件路径"));
     }
     let object = format!("refs/heads/{}:{}", q.branch, q.path);
-    let size = app.git(id, &["cat-file", "-s", &object]).await?;
-    if size.trim().parse::<u64>().unwrap_or(u64::MAX) > 1_000_000 {
+    if app
+        .git(id, &["cat-file", "-s", &object])
+        .await?
+        .trim()
+        .parse::<u64>()
+        .unwrap_or(u64::MAX)
+        > 1_000_000
+    {
         return Err(error(
             StatusCode::PAYLOAD_TOO_LARGE,
             "文件超过1MB，请使用Git客户端读取",
         ));
     }
     Ok(Json(
-        json!({"content": app.git(id, &["show", &object]).await?}),
+        json!({"content":app.git(id, &["show", &object]).await?}),
     ))
-}
-async fn items(
-    State(app): State<App>,
-    Path((id, kind)): Path<(u64, String)>,
-    headers: HeaderMap,
-) -> Result<Json<Value>> {
-    app.repo(id, &headers).await?;
-    check_kind(&kind)?;
-    Ok(Json(json!(
-        app.db
-            .lock()
-            .await
-            .items
-            .iter()
-            .filter(|i| i.repo_id == id && i.kind == kind)
-            .collect::<Vec<_>>()
-    )))
 }
 fn check_kind(kind: &str) -> Result<()> {
     if ["issues", "merge-requests", "pipelines", "wiki"].contains(&kind) {
@@ -293,172 +506,55 @@ fn check_kind(kind: &str) -> Result<()> {
         Err(error(StatusCode::NOT_FOUND, "未知资源"))
     }
 }
-#[derive(Deserialize)]
-struct NewItem {
-    title: String,
-    #[serde(default)]
-    body: String,
-    source: Option<String>,
-    target: Option<String>,
-}
-async fn create_item(
+async fn items(
     State(app): State<App>,
-    Path((id, kind)): Path<(u64, String)>,
-    headers: HeaderMap,
-    Json(input): Json<NewItem>,
-) -> Result<(StatusCode, Json<Item>)> {
-    app.write(&headers)?;
-    app.repo(id, &headers).await?;
-    check_kind(&kind)?;
-    if input.title.trim().is_empty() || input.title.len() > 300 || input.body.len() > 100_000 {
-        return Err(error(
-            StatusCode::BAD_REQUEST,
-            "标题必填（最多300字符），正文最多100KB",
-        ));
-    }
-    if kind == "merge-requests" {
-        let source = input
-            .source
-            .as_deref()
-            .ok_or_else(|| error(StatusCode::BAD_REQUEST, "需要源分支"))?;
-        let target = input
-            .target
-            .as_deref()
-            .ok_or_else(|| error(StatusCode::BAD_REQUEST, "需要目标分支"))?;
-        check_ref(source)?;
-        check_ref(target)?;
-        if source == target {
-            return Err(error(StatusCode::BAD_REQUEST, "源分支和目标分支不能相同"));
-        }
-        app.git(
-            id,
-            &["rev-parse", "--verify", &format!("refs/heads/{source}")],
-        )
-        .await?;
-        app.git(
-            id,
-            &["rev-parse", "--verify", &format!("refs/heads/{target}")],
-        )
-        .await?;
-    }
-    let mut db = app.db.lock().await;
-    let item = Item {
-        id: db.next_id + 1,
-        repo_id: id,
-        kind: kind.clone(),
-        title: input.title,
-        body: input.body,
-        state: if kind == "pipelines" {
-            "queued"
-        } else {
-            "open"
-        }
-        .into(),
-        source: input.source,
-        target: input.target,
-    };
-    let mut next = db.clone();
-    next.next_id = item.id;
-    next.items.push(item.clone());
-    app.save(&next).await?;
-    *db = next;
-    Ok((StatusCode::CREATED, Json(item)))
-}
-#[derive(Deserialize)]
-struct EditItem {
-    state: Option<String>,
-    body: Option<String>,
-}
-async fn edit_item(
-    State(app): State<App>,
-    Path((id, kind, item_id)): Path<(u64, String, u64)>,
-    headers: HeaderMap,
-    Json(edit): Json<EditItem>,
-) -> Result<Json<Item>> {
-    app.write(&headers)?;
-    app.repo(id, &headers).await?;
-    check_kind(&kind)?;
-    let mut db = app.db.lock().await;
-    let mut next = db.clone();
-    let item = next
-        .items
-        .iter_mut()
-        .find(|i| i.id == item_id && i.repo_id == id && i.kind == kind)
-        .ok_or_else(|| error(StatusCode::NOT_FOUND, "资源不存在"))?;
-    if let Some(body) = edit.body {
-        if body.len() > 100_000 {
-            return Err(error(StatusCode::BAD_REQUEST, "正文过长"));
-        }
-        item.body = body;
-    }
-    if let Some(state) = edit.state {
-        let allowed = match kind.as_str() {
-            "pipelines" => matches!(
-                (item.state.as_str(), state.as_str()),
-                ("queued", "running" | "canceled") | ("running", "success" | "failed" | "canceled")
-            ),
-            "merge-requests" => matches!(state.as_str(), "open" | "closed"),
-            _ => matches!(state.as_str(), "open" | "closed"),
-        };
-        if !allowed {
-            return Err(error(
-                StatusCode::BAD_REQUEST,
-                "无效状态转换；合并请使用 merge 接口",
-            ));
-        }
-        item.state = state;
-    }
-    let result = item.clone();
-    app.save(&next).await?;
-    *db = next;
-    Ok(Json(result))
-}
-async fn merge(
-    State(app): State<App>,
-    Path((id, item_id)): Path<(u64, u64)>,
-    headers: HeaderMap,
-) -> Result<Json<Item>> {
-    app.write(&headers)?;
-    app.repo(id, &headers).await?;
-    let mut db = app.db.lock().await;
-    let mut next = db.clone();
-    let item = next
-        .items
-        .iter_mut()
-        .find(|i| i.id == item_id && i.repo_id == id && i.kind == "merge-requests")
-        .ok_or_else(|| error(StatusCode::NOT_FOUND, "合并请求不存在"))?;
-    if item.state != "open" {
-        return Err(error(StatusCode::CONFLICT, "仅可合并打开的请求"));
-    }
-    let source = format!("refs/heads/{}", item.source.as_deref().unwrap_or(""));
-    let target = format!("refs/heads/{}", item.target.as_deref().unwrap_or(""));
-    let old = app.git(id, &["rev-parse", "--verify", &target]).await?;
-    let new = app.git(id, &["rev-parse", "--verify", &source]).await?;
-    app.git(id, &["merge-base", "--is-ancestor", old.trim(), new.trim()])
-        .await?;
-    app.git(id, &["update-ref", &target, new.trim(), old.trim()])
-        .await?;
-    item.state = "merged".into();
-    let result = item.clone();
-    app.save(&next).await?;
-    *db = next;
-    Ok(Json(result))
-}
-async fn insight(
-    State(app): State<App>,
-    Path(id): Path<u64>,
+    Path((id, kind)): Path<(i64, String)>,
     headers: HeaderMap,
 ) -> Result<Json<Value>> {
     app.repo(id, &headers).await?;
-    let db = app.db.lock().await;
-    let count = |kind: &str, state: &str| {
-        db.items
-            .iter()
-            .filter(|i| i.repo_id == id && i.kind == kind && i.state == state)
-            .count()
+    check_kind(&kind)?;
+    let rows = app.db.query(
+        "SELECT row_to_json(i) FROM historical_items i WHERE repo_id=$1 AND kind=$2 ORDER BY id",
+        &[&id, &kind],
+    ).await.map_err(internal)?;
+    Ok(Json(json!(
+        rows.iter()
+            .map(|r| r.get::<_, Value>(0))
+            .collect::<Vec<_>>()
+    )))
+}
+async fn readonly() -> Error {
+    error(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "运行时迁移中：历史协作记录暂时只读；不会写入 JSON",
+    )
+}
+async fn insight(
+    State(app): State<App>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+) -> Result<Json<Value>> {
+    app.repo(id, &headers).await?;
+    let rows = app
+        .db
+        .query(
+            "SELECT kind,state,count(*) FROM historical_items WHERE repo_id=$1 GROUP BY kind,state",
+            &[&id],
+        )
+        .await
+        .map_err(internal)?;
+    let count = |kind: &str, state: Option<&str>| {
+        rows.iter()
+            .filter(|r| {
+                r.get::<_, &str>(0) == kind && state.is_none_or(|s| r.get::<_, &str>(1) == s)
+            })
+            .map(|r| r.get::<_, i64>(2))
+            .sum::<i64>()
     };
     Ok(Json(
-        json!({"open_issues": count("issues", "open"), "open_merge_requests": count("merge-requests", "open"), "pipelines_success": count("pipelines", "success"), "pipelines_failed": count("pipelines", "failed"), "wiki_pages": db.items.iter().filter(|i| i.repo_id == id && i.kind == "wiki").count()}),
+        json!({"open_issues":count("issues",Some("open")), "open_merge_requests":count("merge-requests",Some("open")),
+        "pipelines_success":count("pipelines",Some("success")), "pipelines_failed":count("pipelines",Some("failed")),
+        "wiki_pages":count("wiki",None), "historical_import":true}),
     ))
 }
 fn router(app: App) -> Router {
@@ -467,33 +563,44 @@ fn router(app: App) -> Router {
             "/api/health",
             get(|| async { Json(json!({"status":"ok"})) }),
         )
+        .route("/api/auth/login", post(login))
+        .route("/api/auth/me", get(me))
+        .route("/api/auth/logout", post(logout))
+        .route("/api/auth/refresh", post(refresh))
+        .route("/api/auth/tokens", get(tokens).post(create_token))
+        .route("/api/auth/tokens/{id}", axum::routing::delete(revoke_token))
+        .route("/api/users/{id}/disable", post(disable_user))
         .route("/api/repos", get(repos).post(create_repo))
         .route("/api/repos/{id}", get(repo))
         .route("/api/repos/{id}/branches", get(branches))
         .route("/api/repos/{id}/tree", get(tree))
         .route("/api/repos/{id}/blob", get(blob))
         .route("/api/repos/{id}/insight", get(insight))
+        .route("/api/repos/{id}/members", get(members))
+        .route(
+            "/api/repos/{id}/members/{user_id}",
+            axum::routing::put(set_member).delete(remove_member),
+        )
         .route(
             "/api/repos/{id}/merge-requests/{item_id}/merge",
-            axum::routing::post(merge),
+            post(readonly),
         )
-        .route("/api/repos/{id}/{kind}", get(items).post(create_item))
+        .route("/api/repos/{id}/{kind}", get(items).post(readonly))
         .route(
             "/api/repos/{id}/{kind}/{item_id}",
-            axum::routing::patch(edit_item),
+            axum::routing::patch(readonly),
         )
+        .layer(middleware::from_fn_with_state(app.clone(), boundary))
         .with_state(app)
 }
 #[tokio::main]
-async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let token =
-        std::env::var("WULING_ADMIN_TOKEN").expect("请设置 WULING_ADMIN_TOKEN（至少32字符）");
-    assert!(token.len() >= 32, "WULING_ADMIN_TOKEN 至少32字符");
+async fn main() -> wuling_storage::Result<()> {
     let app = App::open(
         std::env::var("WULING_DATA_DIR")
             .unwrap_or_else(|_| "data".into())
             .into(),
-        token,
+        &std::env::var("WULING_DATABASE_URL")?,
+        std::env::var("WULING_WEB_ORIGIN")?,
     )
     .await?;
     let addr = std::env::var("WULING_LISTEN").unwrap_or_else(|_| "127.0.0.1:4000".into());
@@ -508,303 +615,204 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::{
-        body::{Body, to_bytes},
-        http::Request,
-    };
-    use tower::ServiceExt;
-    async fn call(
-        app: &App,
-        method: &str,
-        uri: &str,
-        payload: Value,
-        auth: bool,
-    ) -> (StatusCode, Value) {
-        let mut request = Request::builder()
-            .method(method)
-            .uri(uri)
-            .header("content-type", "application/json");
-        if auth {
-            request = request.header("authorization", "Bearer test-token");
-        }
-        let response = router(app.clone())
-            .oneshot(request.body(Body::from(payload.to_string())).unwrap())
-            .await
-            .unwrap();
-        let status = response.status();
-        let body = to_bytes(response.into_body(), 1_000_000).await.unwrap();
-        (status, serde_json::from_slice(&body).unwrap_or(Value::Null))
-    }
-    #[tokio::test]
-    async fn rejects_public_registration_and_remote_bootstrap() {
-        let dir =
-            std::env::temp_dir().join(format!("wuling-no-registration-{}", std::process::id()));
-        let app = App::open(dir.clone(), "test-token".into()).await.unwrap();
-        for uri in [
-            "/api/register",
-            "/api/auth/register",
-            "/api/bootstrap",
-            "/api/auth/bootstrap",
-            "/api/users",
-        ] {
-            for auth in [false, true] {
-                let (status, _) =
-                    call(&app, "POST", uri, json!({"username": "intruder"}), auth).await;
-                assert_eq!(status, StatusCode::NOT_FOUND, "{uri}");
-            }
-        }
-        tokio::fs::remove_dir_all(dir).await.unwrap();
-    }
+mod tests;
 
-    #[tokio::test]
-    async fn collaboration_lifecycle_and_scope() {
-        let dir = std::env::temp_dir().join(format!("wuling-collaboration-{}", std::process::id()));
-        let app = App::open(dir.clone(), "test-token".into()).await.unwrap();
-        let (status, repo) = call(
-            &app,
-            "POST",
-            "/api/repos",
-            json!({"name":"public", "public":true}),
-            true,
+async fn tokens(State(app): State<App>, headers: HeaderMap) -> Result<Json<Value>> {
+    let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
+    let rows = app.db.query(
+        "SELECT id,name,scope,extract(epoch FROM expires_at)::bigint FROM personal_tokens WHERE user_id=$1 ORDER BY id",
+        &[&user.id],
+    ).await.map_err(internal)?;
+    Ok(Json(json!(
+        rows.iter()
+            .map(|r| json!({"id":r.get::<_,i64>(0),"name":r.get::<_,&str>(1),
+        "scope":r.get::<_,&str>(2),"expires_at":r.get::<_,i64>(3)}))
+            .collect::<Vec<_>>()
+    )))
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum TokenScope {
+    Read,
+    Write,
+}
+#[derive(Deserialize)]
+struct TokenInput {
+    name: String,
+    scope: TokenScope,
+    expires_in_days: i32,
+}
+async fn create_token(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Json(input): Json<TokenInput>,
+) -> Result<(StatusCode, Json<Value>)> {
+    let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
+    if input.name.trim().is_empty()
+        || input.name.len() > 80
+        || !(1..=365).contains(&input.expires_in_days)
+    {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "名称须为1–80字节；有效期须为1–365天",
+        ));
+    }
+    let scope = match input.scope {
+        TokenScope::Read => "read",
+        TokenScope::Write => "write",
+    };
+    let (token, digest) = iam::pat::issue().map_err(internal)?;
+    let row = app
+        .db
+        .query_opt(
+            "INSERT INTO personal_tokens(user_id,name,digest,scope,expires_at)
+         SELECT id,$2,$3,$4,now()+$5::integer*interval '1 day' FROM users WHERE id=$1 AND active
+         RETURNING id,extract(epoch FROM expires_at)::bigint",
+            &[
+                &user.id,
+                &input.name,
+                &digest,
+                &scope,
+                &input.expires_in_days,
+            ],
         )
-        .await;
-        assert_eq!(status, StatusCode::CREATED);
-        let id = repo["id"].as_u64().unwrap();
-        let base = format!("/api/repos/{id}");
-        for kind in ["issues", "wiki", "pipelines"] {
-            let (_, item) = call(
-                &app,
-                "POST",
-                &format!("{base}/{kind}"),
-                json!({"title":"first", "body":"content"}),
-                true,
+        .await
+        .map_err(internal)?
+        .ok_or_else(unauthorized)?;
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({"id":row.get::<_,i64>(0),"name":input.name,
+        "scope":scope,"expires_at":row.get::<_,i64>(1),"token":token})),
+    ))
+}
+async fn revoke_token(
+    State(app): State<App>,
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+) -> Result<StatusCode> {
+    let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
+    app.db
+        .execute(
+            "DELETE FROM personal_tokens WHERE id=$1 AND user_id=$2",
+            &[&id, &user.id],
+        )
+        .await
+        .map_err(internal)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn members(
+    State(app): State<App>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+) -> Result<Json<Value>> {
+    app.repo(id, &headers).await?;
+    let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
+    if iam::repository::role(app.db.as_ref(), id, user.id)
+        .await
+        .map_err(internal)?
+        != Some(iam::repository::Role::Maintainer)
+    {
+        return Err(error(StatusCode::FORBIDDEN, "需要仓库维护者权限"));
+    }
+    let rows = app.db.query(
+        "SELECT u.id,u.username,u.active,CASE WHEN u.id=r.owner_id THEN 'maintainer' ELSE m.role END,
+         u.id=r.owner_id FROM repositories r JOIN users u ON u.id=r.owner_id
+         OR EXISTS(SELECT 1 FROM repository_members x WHERE x.repo_id=r.id AND x.user_id=u.id)
+         LEFT JOIN repository_members m ON m.repo_id=r.id AND m.user_id=u.id WHERE r.id=$1 ORDER BY u.id",
+        &[&id],
+    ).await.map_err(internal)?;
+    Ok(Json(json!(
+        rows.iter()
+            .map(
+                |r| json!({"user_id":r.get::<_,i64>(0),"username":r.get::<_,&str>(1),
+        "active":r.get::<_,bool>(2),"role":r.get::<_,&str>(3),"owner":r.get::<_,bool>(4)})
             )
-            .await;
-            let item_id = item["id"].as_u64().unwrap();
-            let uri = format!("{base}/{kind}/{item_id}");
-            assert_eq!(
-                call(&app, "PATCH", &uri, json!({"body":"stolen"}), false)
-                    .await
-                    .0,
-                StatusCode::UNAUTHORIZED
-            );
-            assert_eq!(
-                call(
-                    &app,
-                    "PATCH",
-                    &format!("/api/repos/999/{kind}/{item_id}"),
-                    json!({"body":"wrong repo"}),
-                    true
-                )
-                .await
-                .0,
-                StatusCode::NOT_FOUND
-            );
-            if kind == "pipelines" {
-                assert_eq!(
-                    call(&app, "PATCH", &uri, json!({"state":"success"}), true)
-                        .await
-                        .0,
-                    StatusCode::BAD_REQUEST
-                );
-                assert_eq!(
-                    call(&app, "PATCH", &uri, json!({"state":"running"}), true)
-                        .await
-                        .0,
-                    StatusCode::OK
-                );
-                assert_eq!(
-                    call(&app, "PATCH", &uri, json!({"state":"success"}), true)
-                        .await
-                        .0,
-                    StatusCode::OK
-                );
-            } else {
-                let (status, updated) = call(
-                    &app,
-                    "PATCH",
-                    &uri,
-                    json!({"state":"closed", "body":"edited"}),
-                    true,
-                )
-                .await;
-                assert_eq!(status, StatusCode::OK);
-                assert_eq!(updated["body"], "edited");
-            }
+            .collect::<Vec<_>>()
+    )))
+}
+
+#[derive(Deserialize)]
+struct MemberInput {
+    role: iam::repository::Role,
+}
+async fn set_member(
+    State(app): State<App>,
+    Path((id, target)): Path<(i64, i64)>,
+    headers: HeaderMap,
+    Json(input): Json<MemberInput>,
+) -> Result<StatusCode> {
+    change_member(&app, id, target, &headers, Some(input.role)).await
+}
+async fn remove_member(
+    State(app): State<App>,
+    Path((id, target)): Path<(i64, i64)>,
+    headers: HeaderMap,
+) -> Result<StatusCode> {
+    change_member(&app, id, target, &headers, None).await
+}
+async fn change_member(
+    app: &App,
+    id: i64,
+    target: i64,
+    headers: &HeaderMap,
+    role: Option<iam::repository::Role>,
+) -> Result<StatusCode> {
+    app.repo(id, headers).await?;
+    let actor = app.user(headers).await?.ok_or_else(unauthorized)?;
+    let mut db = wuling_storage::connect_local(&app.database_url)
+        .await
+        .map_err(internal)?;
+    let tx = db.transaction().await.map_err(internal)?;
+    // 仓库级锁串行化成员变更；锁后重新核对角色，防止并发降权继续修改成员。
+    let owner: i64 = tx
+        .query_one(
+            "SELECT owner_id FROM repositories WHERE id=$1 FOR UPDATE",
+            &[&id],
+        )
+        .await
+        .map_err(internal)?
+        .get(0);
+    if iam::repository::role(&tx, id, actor.id)
+        .await
+        .map_err(internal)?
+        != Some(iam::repository::Role::Maintainer)
+    {
+        return Err(error(StatusCode::FORBIDDEN, "需要仓库维护者权限"));
+    }
+    if target == owner {
+        return Err(error(
+            StatusCode::CONFLICT,
+            "不能通过成员接口移除或降权仓库所有者",
+        ));
+    }
+    if let Some(role) = role {
+        if tx
+            .query_opt(
+                "SELECT id FROM users WHERE id=$1 AND active FOR SHARE",
+                &[&target],
+            )
+            .await
+            .map_err(internal)?
+            .is_none()
+        {
+            return Err(error(StatusCode::BAD_REQUEST, "目标用户不存在或已停用"));
         }
-        let (_, summary) = call(&app, "GET", &format!("{base}/insight"), Value::Null, false).await;
-        assert_eq!(summary["pipelines_success"], 1);
-        assert_eq!(summary["open_issues"], 0);
-        assert_eq!(summary["wiki_pages"], 1);
-        assert_eq!(
-            call(
-                &app,
-                "POST",
-                &format!("{base}/merge-requests"),
-                json!({"title":"bad", "source":"main", "target":"main"}),
-                true
-            )
-            .await
-            .0,
-            StatusCode::BAD_REQUEST
-        );
-        tokio::fs::remove_dir_all(dir).await.unwrap();
+        tx.execute(
+            "INSERT INTO repository_members(repo_id,user_id,role) VALUES($1,$2,$3)
+            ON CONFLICT(repo_id,user_id) DO UPDATE SET role=EXCLUDED.role",
+            &[&id, &target, &role.as_str()],
+        )
+        .await
+        .map_err(internal)?;
+    } else {
+        tx.execute(
+            "DELETE FROM repository_members WHERE repo_id=$1 AND user_id=$2",
+            &[&id, &target],
+        )
+        .await
+        .map_err(internal)?;
     }
-    #[test]
-    fn rejects_unsafe_names_and_refs() {
-        assert!(!valid_name("../escape"));
-        assert!(valid_name("my-repo"));
-        assert!(check_ref("--all").is_err());
-        assert!(check_ref("feature/one").is_ok());
-    }
-    #[tokio::test]
-    async fn real_git_browse_and_fast_forward_merge() {
-        let dir = std::env::temp_dir().join(format!("wuling-git-{}", std::process::id()));
-        let app = App::open(dir.clone(), "test-token".into()).await.unwrap();
-        let (_, repo) = call(
-            &app,
-            "POST",
-            "/api/repos",
-            json!({"name":"git-test", "public":true}),
-            true,
-        )
-        .await;
-        let id = repo["id"].as_u64().unwrap();
-        let work = dir.join("work");
-        tokio::fs::create_dir_all(&work).await.unwrap();
-        async fn git(work: &std::path::Path, args: &[&str]) {
-            let output = Command::new("git")
-                .current_dir(work)
-                .args([
-                    "-c",
-                    "user.name=Wuling Test",
-                    "-c",
-                    "user.email=test@example.invalid",
-                ])
-                .args(args)
-                .output()
-                .await
-                .unwrap();
-            assert!(
-                output.status.success(),
-                "{}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
-        git(&work, &["init", "--initial-branch=main"]).await;
-        tokio::fs::write(work.join("README.md"), "first\n")
-            .await
-            .unwrap();
-        git(&work, &["add", "README.md"]).await;
-        git(&work, &["commit", "-m", "first"]).await;
-        git(&work, &["checkout", "-b", "feature"]).await;
-        tokio::fs::write(work.join("README.md"), "second\n")
-            .await
-            .unwrap();
-        git(&work, &["commit", "-am", "second"]).await;
-        let remote = dir.join("repos").join(format!("{id}.git"));
-        git(
-            &work,
-            &["push", remote.to_str().unwrap(), "main", "feature"],
-        )
-        .await;
-        let base = format!("/api/repos/{id}");
-        let (status, tree) = call(&app, "GET", &format!("{base}/tree"), Value::Null, false).await;
-        assert_eq!(status, StatusCode::OK);
-        assert_eq!(tree[0], "README.md");
-        let (_, blob) = call(
-            &app,
-            "GET",
-            &format!("{base}/blob?path=README.md"),
-            Value::Null,
-            false,
-        )
-        .await;
-        assert_eq!(blob["content"], "first\n");
-        let (status, mr) = call(
-            &app,
-            "POST",
-            &format!("{base}/merge-requests"),
-            json!({"title":"merge feature", "source":"feature", "target":"main"}),
-            true,
-        )
-        .await;
-        assert_eq!(status, StatusCode::CREATED);
-        let uri = format!("{base}/merge-requests/{}/merge", mr["id"]);
-        let (status, merged) = call(&app, "POST", &uri, json!({}), true).await;
-        assert_eq!(status, StatusCode::OK);
-        assert_eq!(merged["state"], "merged");
-        let (_, blob) = call(
-            &app,
-            "GET",
-            &format!("{base}/blob?path=README.md"),
-            Value::Null,
-            false,
-        )
-        .await;
-        assert_eq!(blob["content"], "second\n");
-        assert_eq!(
-            call(&app, "POST", &uri, json!({}), true).await.0,
-            StatusCode::CONFLICT
-        );
-        tokio::fs::remove_dir_all(dir).await.unwrap();
-    }
-    #[tokio::test]
-    async fn api_persists_and_protects_private_repos() {
-        let dir = std::env::temp_dir().join(format!("wuling-test-{}", std::process::id()));
-        let app = App::open(dir.clone(), "test-token".into()).await.unwrap();
-        let request = |auth: bool| {
-            let mut r = Request::builder()
-                .method("POST")
-                .uri("/api/repos")
-                .header("content-type", "application/json");
-            if auth {
-                r = r.header("authorization", "Bearer test-token");
-            }
-            r.body(Body::from(r#"{"name":"private"}"#)).unwrap()
-        };
-        assert_eq!(
-            router(app.clone())
-                .oneshot(request(false))
-                .await
-                .unwrap()
-                .status(),
-            StatusCode::UNAUTHORIZED
-        );
-        assert_eq!(
-            router(app.clone())
-                .oneshot(request(true))
-                .await
-                .unwrap()
-                .status(),
-            StatusCode::CREATED
-        );
-        let response = router(app)
-            .oneshot(
-                Request::builder()
-                    .uri("/api/repos")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(
-            &to_bytes(response.into_body(), 1000).await.unwrap()[..],
-            b"[]"
-        );
-        assert_eq!(
-            App::open(dir.clone(), "test-token".into())
-                .await
-                .unwrap()
-                .db
-                .lock()
-                .await
-                .repos
-                .len(),
-            1
-        );
-        tokio::fs::remove_dir_all(dir).await.unwrap();
-    }
+    tx.commit().await.map_err(internal)?;
+    Ok(StatusCode::NO_CONTENT)
 }

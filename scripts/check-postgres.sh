@@ -16,12 +16,24 @@ createdb storage_test
 createdb import_test
 createdb cli_test
 createdb admin_test
+createdb server_test
+createdb member_test
+createdb jwt_test
 WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=storage_test" \
   cargo test -p wuling-storage --test postgres -- --ignored
 WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=import_test" \
   cargo test -p wuling-import --test postgres -- --ignored
 WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=admin_test" \
   cargo test -p wuling-admin --test postgres -- --ignored
+WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=server_test" \
+WULING_TEST_DATA_DIR="$base/server-data" \
+  cargo test -p wuling-server postgres_runtime_sessions_and_readonly_history -- --ignored
+WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=member_test" \
+WULING_TEST_DATA_DIR="$base/member-data" \
+  cargo test -p wuling-server repository_member_roles -- --ignored
+WULING_TEST_DATABASE_URL="host=127.0.0.1 port=$port user=$PGUSER dbname=jwt_test" \
+WULING_TEST_DATA_DIR="$base/jwt-data" \
+  cargo test -p wuling-server jwt_cookie_refresh_rotation_and_replay -- --ignored
 
 mkdir -p "$base/original/repos"
 git init --bare --initial-branch=main "$base/original/repos/10.git"

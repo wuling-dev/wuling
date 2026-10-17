@@ -1,5 +1,9 @@
 //! 身份认证和访问控制。HTTP 与本机命令只调用此层，不自行验证密码。
 
+pub mod pat;
+pub mod repository;
+pub mod web;
+
 use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},

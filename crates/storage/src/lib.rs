@@ -19,6 +19,17 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "prototype_import",
         include_str!("../migrations/0002_prototype_import.sql"),
     ),
+    (
+        3,
+        "sessions",
+        include_str!("../migrations/0003_sessions.sql"),
+    ),
+    (
+        4,
+        "personal_tokens",
+        include_str!("../migrations/0004_personal_tokens.sql"),
+    ),
+    (5, "web_jwt", include_str!("../migrations/0005_web_jwt.sql")),
 ];
 
 /// 本机运维连接；远端数据库必须通过经过验证的 TLS 通道连接。

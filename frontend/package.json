@@ -33,17 +33,19 @@
     "@tanstack/react-start": "^1.169.2",
     "@tanstack/react-virtual": "^3.14.19",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@eslint-react/eslint-plugin": "^5.27.3",
     "@eslint/js": "^10.0.1",
     "@lightning-js/lightning": "^3.1.2",
     "@nasti-toolchain/nasti": "^2.6.8",
-    "@wuling/nasti-tanstack-start": "workspace:*",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
+    "@wuling/nasti-tanstack-start": "workspace:*",
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
     "typescript": "npm:@typescript/typescript6@^6.0.2",

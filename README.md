@@ -6,34 +6,41 @@
 
 需要 Rust、系统 Git、Node（见 `.nvmrc`）和项目指定的 pnpm。
 
-在项目根目录运行后端（令牌请自行生成，至少32字符）：
+先按 [数据库说明](deploy/DATABASE.md) 配置 PostgreSQL、运行迁移、本机引导账号和原型导入。
+在项目根目录运行后端（数据库凭据从本地环境或 `.pgpass` 提供，不写入仓库）：
 
 ```sh
-WULING_ADMIN_TOKEN='<random-secret-at-least-32-characters>' cargo run -p wuling-server
+WULING_WEB_ORIGIN='http://localhost:3000' cargo run -p wuling-server
 ```
 
 另一个终端在 `frontend/`：复制 `.env.example` 为 `.env`，执行 `pnpm dev`。生产构建：`pnpm build`，然后 `pnpm start`。两个服务默认只监听 loopback；公开部署必须在前方配置 HTTPS、访问控制、限流和备份。**本版本是单进程开发原型，不适合直接暴露为多租户生产服务。**
 
-前端「偏好与访问」中应用管理员令牌；令牌仅保存在页面内存，刷新清除。匿名用户只能读取公开仓库。私有仓库概览目前不支持直达 SSR 认证，需要在列表应用令牌后刷新并通过客户端导航进入。
+共享管理员令牌已移除；网页 API 使用 HttpOnly JWT Cookie 和可撤销刷新链，匿名只能读公开仓库。
+启动须从外部持久密钥管理器注入 `WULING_JWT_KEYS`，配置格式、迁移和轮换见数据库说明。
+登录/成员/PAT 前端尚待恢复，旧「应用管理员令牌」界面不再有效。
+私有仓库直达 SSR 认证尚未交付。认证 API 见数据库说明。
 
-数据默认保存为 `data/state.json` 和 `data/repos/<id>.git`；可设置 `WULING_DATA_DIR`。元数据使用串行互斥和临时文件 rename，不能多实例共享同一数据目录。备份必须同时覆盖两者。
+元数据保存为 PostgreSQL，Git 默认位于 `data/repos/<id>.git`；可设置 `WULING_DATA_DIR`。
+运行时不再读写 `state.json`。备份必须同时覆盖数据库和 Git，暂不支持多个实例共享 Git 目录。
 
 PostgreSQL 数据层和离线原型导入工具正在按 `restore-core-devops` 恢复，分别位于独立的
 `wuling-storage` / `wuling-import` crate。连接、迁移和隔离验收见
-[数据库说明](deploy/DATABASE.md)。当前 HTTP 原型尚未切换到 PostgreSQL。
+[数据库说明](deploy/DATABASE.md)。HTTP 已切换到 PostgreSQL；历史协作记录暂时只读。
 
 ## 当前功能与边界
 
 | 模块 | 已实现 | 尚未实现 |
 | --- | --- | --- |
 | Repo | 创建公开/私有裸仓库、分支/文件列表、文本读取 | HTTP/SSH clone/push、导入、权限成员、提交浏览 |
-| Issue | 创建、列表、关闭/重新打开 | 评论、标签、指派 |
-| Merge Request | 源/目标分支校验、创建、fast-forward 合并、关闭 | 非快进合并、diff/review、分支保护 |
-| Pipelines | 持久化队列、状态转换记录 | 真实执行、隔离 Runner、日志流、自动触发；当前状态由管理员手动记录 |
-| Wiki | 创建、读取、编辑正文、关闭 | Markdown 渲染、历史版本 |
+| Issue | 导入历史记录只读列表 | 创建/编辑/状态恢复、评论、标签、指派 |
+| Merge Request | 导入历史记录只读列表 | 创建/合并恢复、diff/review、分支保护 |
+| Pipelines | 导入历史状态只读列表 | 真实执行、隔离 Runner、日志流、自动触发；历史成功不代表真实 CI |
+| Wiki | 导入历史记录只读列表 | 写入恢复、Markdown 渲染、历史版本 |
 | Insight | 实时汇总 Issue/MR/流水线状态/Wiki 数量 | 提交趋势、耗时等高级统计 |
 
-向新建仓库写入代码，目前需服务主机本地 Git：`git push /absolute/path/to/data/repos/<id>.git main`。合并通过系统 Git 的 ancestor 检查和带旧值的 `update-ref` 执行。Git 引用更新与 JSON 元数据并非跨存储事务，故障恢复需核对引用。没有添加 OAuth、旧版数据迁移、真实构建执行或完整 Git 托管协议，不能视为旧版功能对等替换。
+向新建仓库写入代码，目前需服务主机本地 Git：`git push /absolute/path/to/data/repos/<id>.git main`。
+历史协作写接口及合并返回 503，待领域迁移后恢复；不再通过旧共享令牌修改数据。
+尚无 OAuth、旧 Go 数据迁移、真实构建执行或完整 Git 托管协议，不能视为旧版功能对等替换。
 
 ## 渲染、SEO 与构建适配
 

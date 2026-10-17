@@ -2,11 +2,9 @@
 # Start an already built, single-instance installation behind an HTTPS proxy.
 set -eu
 cd "$(dirname "$0")/.."
-: "${WULING_ADMIN_TOKEN:?Export WULING_ADMIN_TOKEN}"
-if [ "${#WULING_ADMIN_TOKEN}" -lt 32 ]; then
-  echo "WULING_ADMIN_TOKEN must be at least 32 characters" >&2
-  exit 1
-fi
+: "${WULING_DATABASE_URL:?Export WULING_DATABASE_URL after migration/import}"
+: "${WULING_WEB_ORIGIN:?Export WULING_WEB_ORIGIN (HTTPS origin in production)}"
+: "${WULING_JWT_KEYS:?Inject persistent JWT signing configuration from your secret manager}"
 test -x target/release/wuling-server
 test -f frontend/dist/server/server.js
 backend=

@@ -36,7 +36,7 @@ WULING_TEST_DATABASE_URL='host=127.0.0.1 port=55432 dbname=admin_test' \
 服务端另有公开注册和远程引导拒绝测试：
 
 ```sh
-cargo test -p wuling-server rejects_public_registration_and_remote_bootstrap
+sh scripts/check-postgres.sh
 ```
 
 导入命令和备份要求见 [数据库说明](../../deploy/DATABASE.md)。
