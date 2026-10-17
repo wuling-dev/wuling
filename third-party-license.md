@@ -43,6 +43,7 @@ The project's own license remains [License](License). Brand assets have separate
 | @eslint/js | 10.0.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint_js@10.0.1) |
 | @eslint/object-schema | 3.0.5 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint_object-schema@3.0.5) |
 | @eslint/plugin-kit | 0.7.3 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_eslint_plugin-kit@0.7.3) |
+| @gravity-ui/icons | 2.23.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_gravity-ui_icons@2.23.0) |
 | @heroui/react | 3.2.6 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_heroui_react@3.2.6) |
 | @heroui/styles | 3.2.6 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_heroui_styles@3.2.6) |
 | @humanfs/core | 0.19.2 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_humanfs_core@0.19.2) |
@@ -99,6 +100,9 @@ The project's own license remains [License](License). Brand assets have separate
 | @spectrum-icons/ui | 3.7.2 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_spectrum-icons_ui@3.7.2) |
 | @spectrum-icons/workflow | 4.3.2 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_spectrum-icons_workflow@4.3.2) |
 | @swc/helpers | 0.5.23 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/_swc_helpers@0.5.23) |
+| @tailwindcss/node | 4.3.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_tailwindcss_node@4.3.3) |
+| @tailwindcss/oxide | 4.3.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_tailwindcss_oxide@4.3.3) |
+| @tailwindcss/oxide-darwin-arm64 | 4.3.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_tailwindcss_oxide-darwin-arm64@4.3.3) |
 | @tanstack/charts | 1.1.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_tanstack_charts@1.1.0) |
 | @tanstack/history | 1.162.5 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_tanstack_history@1.162.5) |
 | @tanstack/query-core | 5.104.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/_tanstack_query-core@5.104.3) |
@@ -255,6 +259,7 @@ The project's own license remains [License](License). Brand assets have separate
 | electron-to-chromium | 1.5.456 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/electron-to-chromium@1.5.456) |
 | elliptic-curve | 0.13.8 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/elliptic-curve@0.13.8) |
 | encodeurl | 1.0.2 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/encodeurl@1.0.2) |
+| enhanced-resolve | 5.26.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/enhanced-resolve@5.26.0) |
 | entities | 7.0.1 | BSD-2-Clause | npm (installed; includes tooling) | [notices](licenses/third-party/entities@7.0.1) |
 | errno | 0.3.14 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/errno@0.3.14) |
 | escalade | 3.2.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/escalade@3.2.0) |
@@ -303,6 +308,7 @@ The project's own license remains [License](License). Brand assets have separate
 | getrandom | 0.4.3 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/getrandom@0.4.3) |
 | glob-parent | 6.0.2 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/glob-parent@6.0.2) |
 | globals | 17.13.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/globals@17.13.0) |
+| graceful-fs | 4.2.11 | ISC | npm (installed; includes tooling) | [notices](licenses/third-party/graceful-fs@4.2.11) |
 | group | 0.13.0 | MIT/Apache-2.0 | Cargo | [notices](licenses/third-party/group@0.13.0) |
 | has-flag | 4.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/has-flag@4.0.0) |
 | hashery | 1.5.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/hashery@1.5.1) |
@@ -351,7 +357,9 @@ The project's own license remains [License](License). Brand assets have separate
 | libc | 0.2.190 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/libc@0.2.190) |
 | libm | 0.2.16 | MIT | Cargo | [notices](licenses/third-party/libm@0.2.16) |
 | libredox | 0.1.25 | MIT | Cargo | [notices](licenses/third-party/libredox@0.1.25) |
+| lightningcss | 1.32.0 | MPL-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/lightningcss@1.32.0) |
 | lightningcss | 1.33.0 | MPL-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/lightningcss@1.33.0) |
+| lightningcss-darwin-arm64 | 1.32.0 | MPL-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/lightningcss-darwin-arm64@1.32.0) |
 | lightningcss-darwin-arm64 | 1.33.0 | MPL-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/lightningcss-darwin-arm64@1.33.0) |
 | locate-path | 6.0.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/locate-path@6.0.0) |
 | lock_api | 0.4.14 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/lock_api@0.4.14) |
@@ -405,6 +413,8 @@ The project's own license remains [License](License). Brand assets have separate
 | pin-project-lite | 0.2.17 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/pin-project-lite@0.2.17) |
 | pkcs1 | 0.7.5 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/pkcs1@0.7.5) |
 | pkcs8 | 0.10.2 | Apache-2.0 OR MIT | Cargo | [notices](licenses/third-party/pkcs8@0.10.2) |
+| playwright | 1.64.1 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/playwright@1.64.1) |
+| playwright-core | 1.64.1 | Apache-2.0 | npm (installed; includes tooling) | [notices](licenses/third-party/playwright-core@1.64.1) |
 | postcss | 8.5.30 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/postcss@8.5.30) |
 | postgres-protocol | 0.6.12 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/postgres-protocol@0.6.12) |
 | postgres-types | 0.2.14 | MIT OR Apache-2.0 | Cargo | [notices](licenses/third-party/postgres-types@0.2.14) |
@@ -483,6 +493,7 @@ The project's own license remains [License](License). Brand assets have separate
 | sync_wrapper | 1.0.2 | Apache-2.0 | Cargo | [notices](licenses/third-party/sync_wrapper@1.0.2) |
 | tailwind-variants | 3.3.1 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/tailwind-variants@3.3.1) |
 | tailwindcss | 4.3.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/tailwindcss@4.3.3) |
+| tapable | 2.3.3 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/tapable@2.3.3) |
 | tinybench | 6.2.2 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/tinybench@6.2.2) |
 | tinyglobby | 0.2.17 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/tinyglobby@0.2.17) |
 | tinyrainbow | 3.2.0 | MIT | npm (installed; includes tooling) | [notices](licenses/third-party/tinyrainbow@3.2.0) |

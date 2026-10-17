@@ -17,7 +17,7 @@ WULING_WEB_ORIGIN='http://localhost:3000' cargo run -p wuling-server
 
 共享管理员令牌已移除；网页 API 使用 HttpOnly JWT Cookie 和可撤销刷新链，匿名只能读公开仓库。
 启动须从外部持久密钥管理器注入 `WULING_JWT_KEYS`，配置格式、迁移和轮换见数据库说明。
-登录/成员/PAT 前端尚待恢复，旧「应用管理员令牌」界面不再有效。
+登录、成员与 API Token 前端已接入 Cookie API，旧「应用管理员令牌」入口已移除。
 私有仓库直达 SSR 认证尚未交付。认证 API 见数据库说明。
 
 元数据保存为 PostgreSQL，Git 默认位于 `data/repos/<id>.git`；可设置 `WULING_DATA_DIR`。

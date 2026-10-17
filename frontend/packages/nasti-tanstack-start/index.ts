@@ -25,10 +25,40 @@ export function tanstackStart(): NastiPlugin {
         },
       }
     },
-    resolveId(id) { return virtual.has(id) ? '\0wuling:' + id : undefined },
+    resolveId(id) {
+      // Start's published isomorphic functions are server-default runtime stubs.
+      // Bind their runtime to this native environment; do not import Node storage in a browser.
+      if (id === '@tanstack/start-fn-stubs') {
+        const consumer = this.environment?.consumer
+        if (!consumer) throw new Error('Start adapter requires an explicit environment')
+        return '\0wuling:fn-stubs:' + consumer
+      }
+      if (id === '@tanstack/start-storage-context' && this.environment?.consumer === 'client') return '\0wuling:browser-storage'
+      return virtual.has(id) ? '\0wuling:' + id : undefined
+    },
     load(id) {
       if (!id.startsWith('\0wuling:')) return
       const name = id.slice(8)
+      if (name === 'browser-storage') return `
+        export function getStartContext(options) {
+          if (options?.throwIfNotFound === false) return undefined;
+          throw new Error("Server Start context is unavailable in the browser");
+        }
+        export function runWithStartContext() { throw new Error("Server Start context is unavailable in the browser"); }
+      `
+      if (name.startsWith('fn-stubs:')) return `
+        const client = ${name === 'fn-stubs:client'};
+        const unavailable = () => { throw new Error("Function called in the wrong Start environment"); };
+        function runtime(fn = () => undefined) {
+          return Object.assign(fn, {
+            client: next => runtime(client ? next : fn),
+            server: next => runtime(client ? fn : next)
+          });
+        }
+        export const createIsomorphicFn = () => runtime();
+        export const createClientOnlyFn = fn => client ? fn : unavailable;
+        export const createServerOnlyFn = fn => client ? unavailable : fn;
+      `
       if (name === '#tanstack-router-entry') return `export { getRouter } from ${JSON.stringify(resolve(root, 'src/router.tsx'))}`
       if (name === '#tanstack-start-entry') return `export { startInstance } from ${JSON.stringify(resolve(root, 'src/start.ts'))}`
       if (name === '#tanstack-start-plugin-adapters') return 'export const hasPluginAdapters = false; export const pluginSerializationAdapters = []'

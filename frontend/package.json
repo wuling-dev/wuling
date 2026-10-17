@@ -25,6 +25,7 @@
   "packageManager": "pnpm@12.11.2",
   "type": "module",
   "dependencies": {
+    "@gravity-ui/icons": "^2.23.0",
     "@heroui/react": "^3.2.6",
     "@heroui/styles": "^3.2.6",
     "@tanstack/charts": "^1.1.0",
@@ -41,6 +42,8 @@
     "@eslint/js": "^10.0.1",
     "@lightning-js/lightning": "^3.1.2",
     "@nasti-toolchain/nasti": "^2.6.8",
+    "@tailwindcss/node": "^4.3.3",
+    "@tailwindcss/oxide": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -48,6 +51,8 @@
     "@wuling/nasti-tanstack-start": "workspace:*",
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
+    "playwright": "^1.64.1",
+    "tailwindcss": "^4.3.3",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.71.2"
   }
