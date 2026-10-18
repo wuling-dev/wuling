@@ -47,7 +47,8 @@ PostgreSQL 数据层和离线原型导入工具正在按 `restore-core-devops` �
 - 仅项目 landing page、系统文档、公开仓库 README 与元数据 SSR；其他工作区明确 `ssr: false`，客户端导航交互。
 - `frontend/apps/web/.env` 的 `WULING_INDEXABLE` 默认 false；公开索引部署还应设置真实 `WULING_PUBLIC_ORIGIN`，然后重新构建。标题、description、canonical、robots meta；生产服务器提供 robots.txt 和 X-Robots-Tag。noindex 不是访问控制。
 - 原生适配器在 `frontend/packages/nasti-tanstack-start/index.ts`，直接实现 Nasti environment、virtual module、dev middleware 与生产 manifest 汇总，不导入或包装 TanStack Vite 插件。
-- 使用显式路由树；只支持当前项目所需的 Start SSR/SPA 与 Rust REST 模式，不提供 `createServerFn` 编译、文件路由自动生成或通用插件兼容保证。
+- 文件路由由 `frontend/packages/nasti-tanstack-router` 原生插件调用官方 generator，启动及构建前生成类型化路由树，开发时监听新增、修改、重命名与删除；页面定义在 `frontend/apps/web/src/routes/`。
+- 只支持当前项目所需的 React 文件路由、Start SSR/SPA 与 Rust REST 模式，不提供 `createServerFn` 编译、自动路由代码拆分或通用插件兼容保证。
 - 两个恢复的主题保持原有 token；修正品牌主题 dark selector；直接使用授权 SVG。
 - `frontend/apps/web` 与 `frontend/packages/*` 分离应用、契约客户端和构建适配器；详见 [前端工程说明](frontend/README.md)。
 - 后端 `/api/openapi.json` 和 `/api/docs/` 提供生成契约与 Swagger；`pnpm api:generate` 生成前端类型，`pnpm api:check` 阻止漂移。

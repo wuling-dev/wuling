@@ -31,6 +31,7 @@
     "@types/react-dom": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "@wuling/api-client": "workspace:*",
+    "@wuling/nasti-tanstack-router": "workspace:*",
     "@wuling/nasti-tanstack-start": "workspace:*",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",

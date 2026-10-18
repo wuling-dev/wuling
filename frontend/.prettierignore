@@ -2,7 +2,8 @@ pnpm-lock.yaml
 **/dist/
 **/node_modules/
 **/.nasti/
-.cache/
+**/routeTree.gen.ts
+**/.cache/
 test-results/
 .agents/
 packages/api-client/src/schema.d.ts

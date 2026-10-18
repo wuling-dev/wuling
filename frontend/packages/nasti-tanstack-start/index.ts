@@ -4,7 +4,7 @@ import { request as httpRequest } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { loadEnvFile } from 'node:process';
 
-/** Native adapter for explicit route trees + Rust REST APIs. No Vite plugin wrapping.
+/** Native Start runtime adapter + Rust REST APIs. No Vite plugin wrapping.
  * Server-function compilation is deliberately unsupported: use the Rust API.
  */
 export function tanstackStart(): NastiPlugin {
