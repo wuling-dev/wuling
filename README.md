@@ -13,12 +13,12 @@
 WULING_WEB_ORIGIN='http://localhost:3000' cargo run -p wuling-server
 ```
 
-另一个终端在 `frontend/`：复制 `.env.example` 为 `.env`，执行 `pnpm dev`。生产构建：`pnpm build`，然后 `pnpm start`。两个服务默认只监听 loopback；公开部署必须在前方配置 HTTPS、访问控制、限流和备份。**本版本是单进程开发原型，不适合直接暴露为多租户生产服务。**
+另一个终端在 `frontend/`：执行 `pnpm install --frozen-lockfile`，复制 `apps/web/.env.example` 为 `apps/web/.env`，执行 `pnpm dev`。生产构建：`pnpm build`，然后 `pnpm start`。两个服务默认只监听 loopback；公开部署必须在前方配置 HTTPS、访问控制、限流和备份。**本版本是单进程开发原型，不适合直接暴露为多租户生产服务。**
 
 共享管理员令牌已移除；网页 API 使用 HttpOnly JWT Cookie 和可撤销刷新链，匿名只能读公开仓库。
 启动须从外部持久密钥管理器注入 `WULING_JWT_KEYS`，配置格式、迁移和轮换见数据库说明。
 登录、成员与 API Token 前端已接入 Cookie API，旧「应用管理员令牌」入口已移除。
-私有仓库直达 SSR 认证尚未交付。认证 API 见数据库说明。
+私有仓库直达页只返回匿名壳，登录后的内容由 SPA 获取，不进行私有 SSR。认证 API 见数据库说明。
 
 元数据保存为 PostgreSQL，Git 默认位于 `data/repos/<id>.git`；可设置 `WULING_DATA_DIR`。
 运行时不再读写 `state.json`。备份必须同时覆盖数据库和 Git，暂不支持多个实例共享 Git 目录。
@@ -44,17 +44,19 @@ PostgreSQL 数据层和离线原型导入工具正在按 `restore-core-devops` �
 
 ## 渲染、SEO 与构建适配
 
-- 首页与仓库概览 SSR；代码、Issue、MR、流水线、Wiki、Insight 工作区明确 `ssr: false`，客户端导航交互。
-- `frontend/.env` 的 `WULING_INDEXABLE` 默认 false；公开索引部署还应设置真实 `WULING_PUBLIC_ORIGIN`，然后重新构建。标题、description、canonical、robots meta；生产服务器提供 robots.txt 和 X-Robots-Tag。noindex 不是访问控制。
+- 仅项目 landing page、系统文档、公开仓库 README 与元数据 SSR；其他工作区明确 `ssr: false`，客户端导航交互。
+- `frontend/apps/web/.env` 的 `WULING_INDEXABLE` 默认 false；公开索引部署还应设置真实 `WULING_PUBLIC_ORIGIN`，然后重新构建。标题、description、canonical、robots meta；生产服务器提供 robots.txt 和 X-Robots-Tag。noindex 不是访问控制。
 - 原生适配器在 `frontend/packages/nasti-tanstack-start/index.ts`，直接实现 Nasti environment、virtual module、dev middleware 与生产 manifest 汇总，不导入或包装 TanStack Vite 插件。
 - 使用显式路由树；只支持当前项目所需的 Start SSR/SPA 与 Rust REST 模式，不提供 `createServerFn` 编译、文件路由自动生成或通用插件兼容保证。
 - 两个恢复的主题保持原有 token；修正品牌主题 dark selector；直接使用授权 SVG。
+- `frontend/apps/web` 与 `frontend/packages/*` 分离应用、契约客户端和构建适配器；详见 [前端工程说明](frontend/README.md)。
+- 后端 `/api/openapi.json` 和 `/api/docs/` 提供生成契约与 Swagger；`pnpm api:generate` 生成前端类型，`pnpm api:check` 阻止漂移。
 
 ## 验证与依赖归属
 
 开发、构建和单实例运行入口见 [部署说明](deploy/README.md)：
 `sh scripts/dev.sh`、`sh scripts/build.sh`、`sh scripts/start.sh`。
-`sh scripts/check.sh` 串行执行格式、Clippy、Rust 测试、ESLint、TypeScript 和前端测试。
+`sh scripts/check.sh` 串行执行 Rust 格式、Clippy、Rust 测试、API 契约漂移、Prettier、ESLint、TypeScript 和前端测试。
 Nix 开发 shell / app 入口见 `flake.nix`（尚需在装有 Nix 的机器上验证并生成锁文件）。
 功能恢复批次与 gRPC / 协作工作区边界见 [开发计划](plans/plans.md)。
 

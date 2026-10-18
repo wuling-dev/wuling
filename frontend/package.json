@@ -1,58 +1,43 @@
 {
-  "name": "frontend",
+  "name": "@wuling/frontend",
   "private": true,
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "dev": "nasti dev",
-    "build": "nasti build",
-    "test": "pnpm build && lightning run --config lightning.config.ts",
-    "typecheck": "tsc --noEmit && pnpm --filter './packages/*' --if-present typecheck",
-    "lint": "eslint . --max-warnings 0",
-    "start": "node --env-file-if-exists=.env scripts/serve.mjs"
-  },
-  "keywords": [],
-  "author": "Zixiao Laboratories",
-  "license": "Apache-2.0",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.11.2",
-      "onFail": "download"
-    }
-  },
-  "packageManager": "pnpm@12.11.2",
   "type": "module",
-  "dependencies": {
-    "@gravity-ui/icons": "^2.23.0",
-    "@heroui/react": "^3.2.6",
-    "@heroui/styles": "^3.2.6",
-    "@tanstack/charts": "^1.1.0",
-    "@tanstack/react-query": "^5.104.3",
-    "@tanstack/react-router": "^1.170.44",
-    "@tanstack/react-start": "^1.169.2",
-    "@tanstack/react-virtual": "^3.14.19",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "zod": "^4.6.7"
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @wuling/web dev",
+    "build": "pnpm --filter @wuling/web build",
+    "start": "pnpm --filter @wuling/web start",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit && pnpm -r --if-present typecheck",
+    "api:generate": "node scripts/contract.mjs",
+    "api:check": "node scripts/contract.mjs --check",
+    "test": "pnpm build && lightning run --config lightning.config.ts",
+    "test:e2e": "lightning run --config lightning.e2e.config.ts",
+    "check": "pnpm api:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^5.27.3",
     "@eslint/js": "^10.0.1",
     "@lightning-js/lightning": "^3.1.2",
     "@nasti-toolchain/nasti": "^2.6.8",
-    "@tailwindcss/node": "^4.3.3",
-    "@tailwindcss/oxide": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
+    "@wuling/api-client": "workspace:*",
     "@wuling/nasti-tanstack-start": "workspace:*",
     "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
+    "openapi-typescript": "^7.13.0",
     "playwright": "^1.64.1",
-    "tailwindcss": "^4.3.3",
+    "prettier": "^3.9.10",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.71.2"
   }

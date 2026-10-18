@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+**/dist/
+**/node_modules/
+**/.nasti/
+.cache/
+test-results/
+.agents/
+packages/api-client/src/schema.d.ts
+packages/api-client/openapi.json

@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 : "${WULING_WEB_ORIGIN:?Export WULING_WEB_ORIGIN (HTTPS origin in production)}"
 : "${WULING_JWT_KEYS:?Inject persistent JWT signing configuration from your secret manager}"
 test -x target/release/wuling-server
-test -f frontend/dist/server/server.js
+test -f frontend/apps/web/dist/server/server.js
 backend=
 frontend=
 cleanup() {
@@ -21,7 +21,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 ./target/release/wuling-server &
 backend=$!
-(cd frontend && exec node --env-file-if-exists=.env scripts/serve.mjs) &
+(cd frontend/apps/web && exec node --env-file-if-exists=.env scripts/serve.mjs) &
 frontend=$!
 while kill -0 "$backend" 2>/dev/null && kill -0 "$frontend" 2>/dev/null; do
   sleep 1

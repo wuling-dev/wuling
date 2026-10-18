@@ -7,6 +7,8 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 (
   cd frontend
+  pnpm api:check
+  pnpm format:check
   pnpm lint
   pnpm typecheck
   pnpm test

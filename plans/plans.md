@@ -13,7 +13,8 @@ Repo，Issue，Merge Request，Pipelines，Wiki，Insight
 ### 已确定的架构边界
 
 - 保留 HeroUI React、`frontend/themes` 的主题 token 和 Nasti 原生适配器。
-- 首页、公开仓库概览走 SSR；认证设置、协作编辑、日志等交互工作区走客户端。
+- 仅项目 landing page、公开仓库 README 与元数据、系统文档走 SSR；仓库列表、
+  私有仓库、认证设置、协作编辑、日志等工作区走客户端 SPA。
   私有数据不得进入公共 SSR 缓存或 sitemap；SEO 默认 noindex。
 - 借鉴 Delta 的上下文 / 工作区 / checkout / Git 集成分层，但不实现或声称拥有 DeltaDB。
   协作上下文关联仓库和讨论；工作区拥有独立版本标识；checkout 是可重建的磁盘副本。

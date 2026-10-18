@@ -129,7 +129,7 @@ cargo run -p wuling-server
 - `POST /api/users/<id>/disable`：仅启用管理员可操作；停用并撤销该用户全部会话。
 
 响应使用 `private, no-store`；网页登录、成员与 API Token 页面已接入 Cookie API，
-入口及真实浏览器验收见 [前端说明](../frontend/README.md)。私有概览直达 SSR 认证仍待后续任务。
+入口及真实浏览器验收见 [前端说明](../frontend/README.md)。私有仓库不做 SSR，直达返回匿名壳，认证与内容读取在客户端完成。
 旧「应用管理员令牌」入口已移除，不再保留共享令牌操作界面。
 测试由 `sh scripts/check-postgres.sh` 中独立 `server_test` 库覆盖：
 过期/退出/停用、跨站写入、旧令牌失效、成员移除即时拒绝、

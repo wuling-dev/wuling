@@ -7,7 +7,7 @@
 
 使用 `.nvmrc` 的 Node 和 `frontend/package.json` 的 pnpm 版本。
 先在 `frontend` 执行 `pnpm install --frozen-lockfile`。
-按需复制 `frontend/.env.example` 为 `frontend/.env`，不要提交真实环境文件。
+按需复制 `frontend/apps/web/.env.example` 为 `frontend/apps/web/.env`，不要提交真实环境文件。
 
 TypeScript 7 的 `tsc` 由 `@typescript/native` 别名提供；`typescript` 别名指向
 官方 TS 6 兼容 API，仅供 typescript-eslint 使用。这是官方建议的并行配置，
@@ -22,7 +22,7 @@ sh scripts/dev.sh
 
 该入口启动前后端，任一服务退出后停止另一服务。退出后需检查端口是否释放：
 包管理器/开发服务器可能产生额外子进程，不作为生产进程管理器使用。
-旧 git2 依赖在新 CMake 环境需要先导出 `CMAKE_POLICY_VERSION_MINIMUM=3.5`。
+Git 操作使用系统 Git，不链接 libgit2。
 
 ## 构建与运行
 
@@ -35,6 +35,8 @@ sh scripts/start.sh
 构建阶段需要联网拉取锁定依赖；它不是离线/可复现的 Nix derivation。
 不要在构建阶段注入管理员令牌。SEO 的 `WULING_INDEXABLE` 和
 `WULING_PUBLIC_ORIGIN` 是构建配置，修改后重建；默认禁止索引。
+输出位于 `frontend/apps/web/dist`；应用只在 landing、系统文档和公开 README/元数据使用 SSR。
+其他页面为 noindex SPA。Swagger 位于 `/api/docs/`，由前端的同源 API 代理转发。
 
 运行阶段注入 `WULING_DATABASE_URL`、持久 `WULING_JWT_KEYS`、HTTPS 的 `WULING_WEB_ORIGIN` 和绝对路径 `WULING_DATA_DIR`。后端默认监听
 `127.0.0.1:4000`，前端默认监听 `127.0.0.1:3000`。
@@ -64,11 +66,15 @@ nix run .#start
 
 ## 当前验证记录
 
-在 macOS / Node 24.15.0 下执行
-`CMAKE_POLICY_VERSION_MINIMUM=3.5 sh scripts/check.sh`：
-Rust 格式与 Clippy、4 个 Rust 测试、ESLint、TS 7 类型检查、前端生产构建、
-4 个 Lightning 测试通过。测试覆盖现有 SPA shell 的 noindex 与不泄露工作区内容。
-构建仍有上游 `use client` 指令和 `node:async_hooks` 外部依赖警告。
+在 macOS / Node 24.15.0 / pnpm 12.11.2 下验证：
 
-所有 shell 脚本通过 `sh -n`。本机未安装 Nix，未验证 flake；
-也尚未验证开发入口的完整启停、生产双进程运行、HTTPS 或备份恢复流程。
+- `sh scripts/check.sh`：Rust 格式、Clippy、workspace 单元测试、API 契约漂移、
+  Prettier、ESLint、TS 7、生产构建和 15 个 Lightning 测试通过。
+- `sh scripts/check-postgres.sh`：独立数据库中的迁移、导入、账号、成员与 JWT 集成测试通过。
+- `sh scripts/check-web.sh` 与 `WULING_WEB_TEST_INDEXABLE=true sh scripts/check-web.sh`：
+  真实 Rust API、生产前端代理与 Chromium；覆盖权限、双标签续期、账号隔离、
+  真实 Git README、公开 SSR / 私有 SPA、索引头、sitemap 与 Swagger。
+- `pnpm install --frozen-lockfile` 通过，新增依赖已更新许可证清单。
+
+构建仍有上游 `use client` 指令警告；浏览器无运行错误，构建测试阻止 Node storage 进入客户端。
+截图为人工审阅，没有像素差分基线。Firefox、WebKit、Nix、部署 TLS 与备份恢复未验收。

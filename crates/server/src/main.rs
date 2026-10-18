@@ -4,19 +4,28 @@ use axum::{
     http::{HeaderMap, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, post},
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{path::PathBuf, sync::Arc};
 use tokio::process::Command;
 use tokio_postgres::Client;
+use utoipa::{IntoParams, ToSchema};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use wuling_storage::identity::User;
 
-type Error = (StatusCode, Json<Value>);
+mod dto;
+use dto::*;
+
+type Error = (StatusCode, Json<ApiError>);
 type Result<T> = std::result::Result<T, Error>;
 fn error(status: StatusCode, message: &str) -> Error {
-    (status, Json(json!({"error": message})))
+    (
+        status,
+        Json(ApiError {
+            error: message.into(),
+        }),
+    )
 }
 fn internal(_: impl std::fmt::Display) -> Error {
     error(StatusCode::INTERNAL_SERVER_ERROR, "数据库或 Git 操作失败")
@@ -208,11 +217,13 @@ async fn boundary(State(app): State<App>, request: axum::extract::Request, next:
     response
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 struct Login {
     username: String,
     password: String,
 }
+#[utoipa::path(post, path = "/api/auth/login", tag = "Account",
+    request_body = Login, security(()), responses((status = 200, body = Account)))]
 async fn login(
     State(app): State<App>,
     headers: HeaderMap,
@@ -234,13 +245,19 @@ async fn login(
     )
     .await
     .map_err(internal)?;
-    let mut response = Json(user).into_response();
+    let mut response = Json(Account::from(user)).into_response();
     credential_cookies(&mut response, &app, Some(&credentials));
     Ok(response)
 }
-async fn me(State(app): State<App>, headers: HeaderMap) -> Result<Json<User>> {
-    Ok(Json(app.user(&headers).await?.ok_or_else(unauthorized)?))
+#[utoipa::path(get, path = "/api/auth/me", tag = "Account",
+    responses((status = 200, body = Account)))]
+async fn me(State(app): State<App>, headers: HeaderMap) -> Result<Json<Account>> {
+    Ok(Json(
+        app.user(&headers).await?.ok_or_else(unauthorized)?.into(),
+    ))
 }
+#[utoipa::path(post, path = "/api/auth/logout", tag = "Account",
+    responses((status = 204, description = "Session revoked; cookies cleared")))]
 async fn logout(State(app): State<App>, headers: HeaderMap) -> Result<Response> {
     iam::web::revoke(
         app.db.as_ref(),
@@ -254,6 +271,9 @@ async fn logout(State(app): State<App>, headers: HeaderMap) -> Result<Response> 
     credential_cookies(&mut response, &app, None);
     Ok(response)
 }
+#[utoipa::path(post, path = "/api/auth/refresh", tag = "Account",
+    security(("refreshCookie" = [])),
+    responses((status = 204, description = "Rotated HttpOnly cookies")))]
 async fn refresh(State(app): State<App>, headers: HeaderMap) -> Result<Response> {
     let credentials = if let Some(token) = named_cookie(&headers, "wuling_refresh") {
         let mut db = wuling_storage::connect_local(&app.database_url)
@@ -297,6 +317,8 @@ fn credential_cookies(
             .append(header::SET_COOKIE, value.parse().expect("受控 Cookie 字符"));
     }
 }
+#[utoipa::path(post, path = "/api/users/{id}/disable", tag = "Account",
+    params(("id" = i64, Path)), responses((status = 204, description = "Administrator only")))]
 async fn disable_user(
     State(app): State<App>,
     headers: HeaderMap,
@@ -318,32 +340,39 @@ async fn disable_user(
         .map_err(internal)?;
     Ok(StatusCode::NO_CONTENT)
 }
-async fn repos(State(app): State<App>, headers: HeaderMap) -> Result<Json<Value>> {
+#[utoipa::path(get, path = "/api/repos", tag = "Repositories",
+    security((), ("sessionCookie" = []), ("personalToken" = [])),
+    responses((status = 200, body = Vec<Repository>)))]
+async fn repos(State(app): State<App>, headers: HeaderMap) -> Result<Json<Vec<Repository>>> {
     let uid = app.read_user(&headers).await?.map(|u| u.id);
     let rows = app.db.query(
         "SELECT row_to_json(r) FROM repositories r WHERE r.public OR r.owner_id=$1
          OR EXISTS (SELECT 1 FROM repository_members m WHERE m.repo_id=r.id AND m.user_id=$1) ORDER BY r.id",
         &[&uid],
     ).await.map_err(internal)?;
-    Ok(Json(json!(
+    Ok(Json(
         rows.iter()
-            .map(|r| r.get::<_, Value>(0))
-            .collect::<Vec<_>>()
-    )))
+            .map(|r| serde_json::from_value(r.get::<_, Value>(0)))
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(internal)?,
+    ))
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 struct NewRepo {
+    #[schema(min_length = 1, max_length = 80, pattern = "^[A-Za-z0-9_-]+$")]
     name: String,
     #[serde(default)]
     description: String,
     #[serde(default)]
     public: bool,
 }
+#[utoipa::path(post, path = "/api/repos", tag = "Repositories",
+    request_body = NewRepo, responses((status = 201, body = Repository)))]
 async fn create_repo(
     State(app): State<App>,
     headers: HeaderMap,
     Json(input): Json<NewRepo>,
-) -> Result<(StatusCode, Json<Value>)> {
+) -> Result<(StatusCode, Json<Repository>)> {
     let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
     if input.name.is_empty()
         || input.name.len() > 80
@@ -401,32 +430,47 @@ async fn create_repo(
         .map_err(internal)?
         .get(0);
     tx.commit().await.map_err(internal)?;
-    Ok((StatusCode::CREATED, Json(repo)))
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::from_value(repo).map_err(internal)?),
+    ))
 }
+#[utoipa::path(get, path = "/api/repos/{id}", tag = "Repositories",
+    params(("id" = i64, Path)),
+    security((), ("sessionCookie" = []), ("personalToken" = [])),
+    responses((status = 200, body = Repository)))]
 async fn repo(
     State(app): State<App>,
     Path(id): Path<i64>,
     headers: HeaderMap,
-) -> Result<Json<Value>> {
-    Ok(Json(app.repo(id, &headers).await?))
+) -> Result<Json<Repository>> {
+    Ok(Json(
+        serde_json::from_value(app.repo(id, &headers).await?).map_err(internal)?,
+    ))
 }
+#[utoipa::path(get, path = "/api/repos/{id}/branches", tag = "Code",
+    params(("id" = i64, Path)),
+    security((), ("sessionCookie" = []), ("personalToken" = [])),
+    responses((status = 200, body = Vec<String>)))]
 async fn branches(
     State(app): State<App>,
     Path(id): Path<i64>,
     headers: HeaderMap,
-) -> Result<Json<Value>> {
+) -> Result<Json<Vec<String>>> {
     app.repo(id, &headers).await?;
-    Ok(Json(json!(
+    Ok(Json(
         app.git(
             id,
-            &["for-each-ref", "--format=%(refname:short)", "refs/heads/"]
+            &["for-each-ref", "--format=%(refname:short)", "refs/heads/"],
         )
         .await?
         .lines()
-        .collect::<Vec<_>>()
-    )))
+        .map(str::to_owned)
+        .collect::<Vec<_>>(),
+    ))
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct GitQuery {
     #[serde(default = "main_branch")]
     branch: String,
@@ -447,35 +491,44 @@ fn check_ref(branch: &str) -> Result<()> {
     }
     Ok(())
 }
+#[utoipa::path(get, path = "/api/repos/{id}/tree", tag = "Code",
+    params(("id" = i64, Path), GitQuery),
+    security((), ("sessionCookie" = []), ("personalToken" = [])),
+    responses((status = 200, body = Vec<String>)))]
 async fn tree(
     State(app): State<App>,
     Path(id): Path<i64>,
     headers: HeaderMap,
     axum::extract::Query(q): axum::extract::Query<GitQuery>,
-) -> Result<Json<Value>> {
+) -> Result<Json<Vec<String>>> {
     app.repo(id, &headers).await?;
     check_ref(&q.branch)?;
-    Ok(Json(json!(
+    Ok(Json(
         app.git(
             id,
             &[
                 "ls-tree",
                 "-r",
                 "--name-only",
-                &format!("refs/heads/{}", q.branch)
-            ]
+                &format!("refs/heads/{}", q.branch),
+            ],
         )
         .await?
         .lines()
-        .collect::<Vec<_>>()
-    )))
+        .map(str::to_owned)
+        .collect::<Vec<_>>(),
+    ))
 }
+#[utoipa::path(get, path = "/api/repos/{id}/blob", tag = "Code",
+    params(("id" = i64, Path), GitQuery),
+    security((), ("sessionCookie" = []), ("personalToken" = [])),
+    responses((status = 200, body = Blob), (status = 413, body = ApiError)))]
 async fn blob(
     State(app): State<App>,
     Path(id): Path<i64>,
     headers: HeaderMap,
     axum::extract::Query(q): axum::extract::Query<GitQuery>,
-) -> Result<Json<Value>> {
+) -> Result<Json<Blob>> {
     app.repo(id, &headers).await?;
     check_ref(&q.branch)?;
     if q.path.len() > 1024 || q.path.contains('\0') {
@@ -495,9 +548,9 @@ async fn blob(
             "文件超过1MB，请使用Git客户端读取",
         ));
     }
-    Ok(Json(
-        json!({"content":app.git(id, &["show", &object]).await?}),
-    ))
+    Ok(Json(Blob {
+        content: app.git(id, &["show", &object]).await?,
+    }))
 }
 fn check_kind(kind: &str) -> Result<()> {
     if ["issues", "merge-requests", "pipelines", "wiki"].contains(&kind) {
@@ -506,34 +559,60 @@ fn check_kind(kind: &str) -> Result<()> {
         Err(error(StatusCode::NOT_FOUND, "未知资源"))
     }
 }
+#[utoipa::path(get, path = "/api/repos/{id}/{kind}", tag = "History",
+    params(("id" = i64, Path), ("kind" = String, Path, description = "issues, merge-requests, pipelines, or wiki")),
+    security((), ("sessionCookie" = []), ("personalToken" = [])),
+    responses((status = 200, body = Vec<HistoricalItem>)))]
 async fn items(
     State(app): State<App>,
     Path((id, kind)): Path<(i64, String)>,
     headers: HeaderMap,
-) -> Result<Json<Value>> {
+) -> Result<Json<Vec<HistoricalItem>>> {
     app.repo(id, &headers).await?;
     check_kind(&kind)?;
     let rows = app.db.query(
         "SELECT row_to_json(i) FROM historical_items i WHERE repo_id=$1 AND kind=$2 ORDER BY id",
         &[&id, &kind],
     ).await.map_err(internal)?;
-    Ok(Json(json!(
+    Ok(Json(
         rows.iter()
-            .map(|r| r.get::<_, Value>(0))
-            .collect::<Vec<_>>()
-    )))
+            .map(|r| serde_json::from_value(r.get::<_, Value>(0)))
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(internal)?,
+    ))
 }
+#[utoipa::path(post, path = "/api/repos/{id}/{kind}", tag = "History",
+    params(("id" = i64, Path), ("kind" = String, Path)),
+    responses((status = 503, body = ApiError)))]
 async fn readonly() -> Error {
     error(
         StatusCode::SERVICE_UNAVAILABLE,
         "运行时迁移中：历史协作记录暂时只读；不会写入 JSON",
     )
 }
+#[utoipa::path(patch, path = "/api/repos/{id}/{kind}/{item_id}", tag = "History",
+    params(("id" = i64, Path), ("kind" = String, Path), ("item_id" = i64, Path)),
+    responses((status = 503, body = ApiError)))]
+async fn readonly_update() -> Error {
+    readonly().await
+}
+
+#[utoipa::path(post, path = "/api/repos/{id}/merge-requests/{item_id}/merge", tag = "History",
+    params(("id" = i64, Path), ("item_id" = i64, Path)),
+    responses((status = 503, body = ApiError)))]
+async fn readonly_merge() -> Error {
+    readonly().await
+}
+
+#[utoipa::path(get, path = "/api/repos/{id}/insight", tag = "History",
+    params(("id" = i64, Path)),
+    security((), ("sessionCookie" = []), ("personalToken" = [])),
+    responses((status = 200, body = Insight)))]
 async fn insight(
     State(app): State<App>,
     Path(id): Path<i64>,
     headers: HeaderMap,
-) -> Result<Json<Value>> {
+) -> Result<Json<Insight>> {
     app.repo(id, &headers).await?;
     let rows = app
         .db
@@ -551,50 +630,65 @@ async fn insight(
             .map(|r| r.get::<_, i64>(2))
             .sum::<i64>()
     };
-    Ok(Json(
-        json!({"open_issues":count("issues",Some("open")), "open_merge_requests":count("merge-requests",Some("open")),
-        "pipelines_success":count("pipelines",Some("success")), "pipelines_failed":count("pipelines",Some("failed")),
-        "wiki_pages":count("wiki",None), "historical_import":true}),
-    ))
+    Ok(Json(Insight {
+        open_issues: count("issues", Some("open")),
+        open_merge_requests: count("merge-requests", Some("open")),
+        pipelines_success: count("pipelines", Some("success")),
+        pipelines_failed: count("pipelines", Some("failed")),
+        wiki_pages: count("wiki", None),
+        historical_import: true,
+    }))
 }
+#[utoipa::path(get, path = "/api/health", tag = "System", security(()),
+    responses((status = 200, body = Health)))]
+async fn health() -> Json<Health> {
+    Json(Health {
+        status: "ok".into(),
+    })
+}
+
+mod contract;
+
+fn api_router() -> OpenApiRouter<App> {
+    OpenApiRouter::new()
+        .routes(routes!(health))
+        .routes(routes!(login))
+        .routes(routes!(me))
+        .routes(routes!(logout))
+        .routes(routes!(refresh))
+        .routes(routes!(tokens, create_token))
+        .routes(routes!(revoke_token))
+        .routes(routes!(disable_user))
+        .routes(routes!(repos, create_repo))
+        .routes(routes!(repo))
+        .routes(routes!(branches))
+        .routes(routes!(tree))
+        .routes(routes!(blob))
+        .routes(routes!(insight))
+        .routes(routes!(members))
+        .routes(routes!(set_member, remove_member))
+        .routes(routes!(items, readonly))
+        .routes(routes!(readonly_update))
+        .routes(routes!(readonly_merge))
+}
+
 fn router(app: App) -> Router {
-    Router::new()
-        .route(
-            "/api/health",
-            get(|| async { Json(json!({"status":"ok"})) }),
-        )
-        .route("/api/auth/login", post(login))
-        .route("/api/auth/me", get(me))
-        .route("/api/auth/logout", post(logout))
-        .route("/api/auth/refresh", post(refresh))
-        .route("/api/auth/tokens", get(tokens).post(create_token))
-        .route("/api/auth/tokens/{id}", axum::routing::delete(revoke_token))
-        .route("/api/users/{id}/disable", post(disable_user))
-        .route("/api/repos", get(repos).post(create_repo))
-        .route("/api/repos/{id}", get(repo))
-        .route("/api/repos/{id}/branches", get(branches))
-        .route("/api/repos/{id}/tree", get(tree))
-        .route("/api/repos/{id}/blob", get(blob))
-        .route("/api/repos/{id}/insight", get(insight))
-        .route("/api/repos/{id}/members", get(members))
-        .route(
-            "/api/repos/{id}/members/{user_id}",
-            axum::routing::put(set_member).delete(remove_member),
-        )
-        .route(
-            "/api/repos/{id}/merge-requests/{item_id}/merge",
-            post(readonly),
-        )
-        .route("/api/repos/{id}/{kind}", get(items).post(readonly))
-        .route(
-            "/api/repos/{id}/{kind}/{item_id}",
-            axum::routing::patch(readonly),
+    let (router, _) = api_router().split_for_parts();
+    router
+        .merge(
+            utoipa_swagger_ui::SwaggerUi::new("/api/docs")
+                .url("/api/openapi.json", contract::document())
+                .config(utoipa_swagger_ui::Config::default().validator_url("none")),
         )
         .layer(middleware::from_fn_with_state(app.clone(), boundary))
         .with_state(app)
 }
 #[tokio::main]
 async fn main() -> wuling_storage::Result<()> {
+    if std::env::args().nth(1).as_deref() == Some("--export-openapi") {
+        println!("{}", contract::document().to_pretty_json()?);
+        return Ok(());
+    }
     let app = App::open(
         std::env::var("WULING_DATA_DIR")
             .unwrap_or_else(|_| "data".into())
@@ -617,36 +711,41 @@ async fn main() -> wuling_storage::Result<()> {
 #[cfg(test)]
 mod tests;
 
-async fn tokens(State(app): State<App>, headers: HeaderMap) -> Result<Json<Value>> {
+#[utoipa::path(get, path = "/api/auth/tokens", tag = "Tokens",
+    responses((status = 200, body = Vec<PersonalToken>)))]
+async fn tokens(State(app): State<App>, headers: HeaderMap) -> Result<Json<Vec<PersonalToken>>> {
     let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
     let rows = app.db.query(
         "SELECT id,name,scope,extract(epoch FROM expires_at)::bigint FROM personal_tokens WHERE user_id=$1 ORDER BY id",
         &[&user.id],
     ).await.map_err(internal)?;
-    Ok(Json(json!(
+    Ok(Json(
         rows.iter()
-            .map(|r| json!({"id":r.get::<_,i64>(0),"name":r.get::<_,&str>(1),
-        "scope":r.get::<_,&str>(2),"expires_at":r.get::<_,i64>(3)}))
-            .collect::<Vec<_>>()
-    )))
+            .map(|r| {
+                Ok(PersonalToken {
+                    id: r.get(0),
+                    name: r.get(1),
+                    scope: serde_json::from_value(json!(r.get::<_, &str>(2))).map_err(internal)?,
+                    expires_at: r.get(3),
+                })
+            })
+            .collect::<Result<Vec<_>>>()?,
+    ))
 }
-#[derive(Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum TokenScope {
-    Read,
-    Write,
-}
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 struct TokenInput {
     name: String,
     scope: TokenScope,
+    #[schema(minimum = 1, maximum = 365)]
     expires_in_days: i32,
 }
+#[utoipa::path(post, path = "/api/auth/tokens", tag = "Tokens",
+    request_body = TokenInput, responses((status = 201, body = IssuedToken)))]
 async fn create_token(
     State(app): State<App>,
     headers: HeaderMap,
     Json(input): Json<TokenInput>,
-) -> Result<(StatusCode, Json<Value>)> {
+) -> Result<(StatusCode, Json<IssuedToken>)> {
     let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
     if input.name.trim().is_empty()
         || input.name.len() > 80
@@ -681,10 +780,19 @@ async fn create_token(
         .ok_or_else(unauthorized)?;
     Ok((
         StatusCode::CREATED,
-        Json(json!({"id":row.get::<_,i64>(0),"name":input.name,
-        "scope":scope,"expires_at":row.get::<_,i64>(1),"token":token})),
+        Json(IssuedToken {
+            metadata: PersonalToken {
+                id: row.get(0),
+                name: input.name,
+                scope: input.scope,
+                expires_at: row.get(1),
+            },
+            token,
+        }),
     ))
 }
+#[utoipa::path(delete, path = "/api/auth/tokens/{id}", tag = "Tokens",
+    params(("id" = i64, Path)), responses((status = 204, description = "Token revoked")))]
 async fn revoke_token(
     State(app): State<App>,
     headers: HeaderMap,
@@ -701,11 +809,13 @@ async fn revoke_token(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(get, path = "/api/repos/{id}/members", tag = "Members",
+    params(("id" = i64, Path)), responses((status = 200, body = Vec<Member>)))]
 async fn members(
     State(app): State<App>,
     Path(id): Path<i64>,
     headers: HeaderMap,
-) -> Result<Json<Value>> {
+) -> Result<Json<Vec<Member>>> {
     app.repo(id, &headers).await?;
     let user = app.user(&headers).await?.ok_or_else(unauthorized)?;
     if iam::repository::role(app.db.as_ref(), id, user.id)
@@ -722,28 +832,39 @@ async fn members(
          LEFT JOIN repository_members m ON m.repo_id=r.id AND m.user_id=u.id WHERE r.id=$1 ORDER BY u.id",
         &[&id],
     ).await.map_err(internal)?;
-    Ok(Json(json!(
+    Ok(Json(
         rows.iter()
-            .map(
-                |r| json!({"user_id":r.get::<_,i64>(0),"username":r.get::<_,&str>(1),
-        "active":r.get::<_,bool>(2),"role":r.get::<_,&str>(3),"owner":r.get::<_,bool>(4)})
-            )
-            .collect::<Vec<_>>()
-    )))
+            .map(|r| {
+                Ok(Member {
+                    user_id: r.get(0),
+                    username: r.get(1),
+                    active: r.get(2),
+                    role: serde_json::from_value(json!(r.get::<_, &str>(3))).map_err(internal)?,
+                    owner: r.get(4),
+                })
+            })
+            .collect::<Result<Vec<_>>>()?,
+    ))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 struct MemberInput {
-    role: iam::repository::Role,
+    role: MemberRole,
 }
+#[utoipa::path(put, path = "/api/repos/{id}/members/{user_id}", tag = "Members",
+    params(("id" = i64, Path), ("user_id" = i64, Path)),
+    request_body = MemberInput, responses((status = 204, description = "Role saved")))]
 async fn set_member(
     State(app): State<App>,
     Path((id, target)): Path<(i64, i64)>,
     headers: HeaderMap,
     Json(input): Json<MemberInput>,
 ) -> Result<StatusCode> {
-    change_member(&app, id, target, &headers, Some(input.role)).await
+    change_member(&app, id, target, &headers, Some(input.role.into())).await
 }
+#[utoipa::path(delete, path = "/api/repos/{id}/members/{user_id}", tag = "Members",
+    params(("id" = i64, Path), ("user_id" = i64, Path)),
+    responses((status = 204, description = "Member removed")))]
 async fn remove_member(
     State(app): State<App>,
     Path((id, target)): Path<(i64, i64)>,

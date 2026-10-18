@@ -40,7 +40,7 @@ export WULING_LISTEN="127.0.0.1:$apiport"
 export WULING_API_ORIGIN="http://127.0.0.1:$apiport"
 export WULING_E2E_ORIGIN="$WULING_WEB_ORIGIN"
 export WULING_PUBLIC_ORIGIN="$WULING_WEB_ORIGIN"
-export WULING_INDEXABLE=false
+export WULING_INDEXABLE=${WULING_WEB_TEST_INDEXABLE:-false}
 export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-$PWD/frontend/.cache/playwright}"
 # Ephemeral fixture only, never a production signing-key procedure.
 WULING_JWT_KEYS=$(python3 -c 'import json,secrets; print(json.dumps({"active_kid":"e2e","keys":[{"kid":"e2e","secret_hex":secrets.token_hex(32)}]}))')
@@ -52,7 +52,7 @@ printf 'test-only-long-password\n' | target/debug/wuling-admin bootstrap alice
 printf 'test-only-long-password\ntest-only-long-password\n' | target/debug/wuling-admin create-user alice bob
 target/debug/wuling-server > "$base/api.log" 2>&1 &
 backend=$!
-(cd frontend && PORT="$webport" exec node scripts/serve.mjs) > "$base/web.log" 2>&1 &
+(cd frontend/apps/web && PORT="$webport" exec node scripts/serve.mjs) > "$base/web.log" 2>&1 &
 frontend=$!
 kill -0 "$backend"
 kill -0 "$frontend"
